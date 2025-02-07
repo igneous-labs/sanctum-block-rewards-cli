@@ -1,0 +1,21 @@
+[package]
+name = "sanctum-block-rewards-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "blockrewards"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "^4", features = ["derive"] }
+tokio = { version = "^1", features = ["rt-multi-thread"] }
+
+# sanctum solana utils
+sanctum-solana-cli-utils = { features = ["clap"], git = "https://github.com/igneous-labs/sanctum-solana-utils" }
+sanctum-solana-client-utils = { git = "https://github.com/igneous-labs/sanctum-solana-utils" }
+solana-client = "2.1.13"
+solana-sdk = "2.1.13"
+indicatif = "0.17.11"
+
+
