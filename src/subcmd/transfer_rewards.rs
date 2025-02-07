@@ -1,17 +1,11 @@
+use borsh::BorshDeserialize;
 use indicatif::{ProgressBar, ProgressState, ProgressStyle};
-use sanctum_spl_stake_pool_lib::{
-    account_resolvers::UpdateStakePoolBalance, deserialize_stake_pool_checked,
-    FindWithdrawAuthority,
-};
-use solana_readonly_account::{keyed::Keyed, ReadonlyAccountData};
+use sanctum_spl_stake_pool_lib::{deserialize_stake_pool_checked, FindWithdrawAuthority};
 use spl_stake_pool_interface::{
-    update_stake_pool_balance_ix, update_stake_pool_balance_ix_with_program_id, StakePool,
-    UpdateStakePoolBalanceKeys, ValidatorList,
+    update_stake_pool_balance_ix_with_program_id, StakePool, UpdateStakePoolBalanceKeys,
 };
 use std::fmt::Write;
 use std::sync::Arc;
-
-use borsh::BorshDeserialize;
 
 use crate::{handle_tx_full, subcmd::Subcmd, with_auto_cb_ixs};
 use clap::{command, Args};
@@ -20,7 +14,7 @@ use solana_client::rpc_config::{RpcBlockConfig, RpcLeaderScheduleConfig};
 use solana_sdk::{
     account::{Account, ReadableAccount},
     commitment_config::CommitmentConfig,
-    fee,
+    system_instruction::transfer,
 };
 use tokio;
 
@@ -65,18 +59,18 @@ impl TransferRewardsArgs {
         let send_mode = args.send_mode;
         let fee_limit_cb = args.fee_limit_cb;
 
-        let payer = args.config.signer();
-
-        let (current_epoch_info, epoch_schedule) =
-            tokio::try_join!(rpc.get_epoch_info(), rpc.get_epoch_schedule()).unwrap();
-
+        // identity keypair, which will also be used as payer
         let identity_keypair = parse_named_signer(ParseNamedSigner {
             name: "identity",
             arg: &identity_keypair_path,
         })
         .unwrap();
 
-        let _identity_pubkey = identity_keypair.pubkey().to_string();
+        let identity_pubkey = identity_keypair.pubkey();
+
+        // Get current epoch info and epoch schedule
+        let (current_epoch_info, epoch_schedule) =
+            tokio::try_join!(rpc.get_epoch_info(), rpc.get_epoch_schedule()).unwrap();
 
         // Calculate the first slot of the previous epoch
         // Reference: https://github.com/solana-foundation/explorer/blob/ad529a6b9692be98096c55459e6406c0dd1654c5/app/utils/epoch-schedule.ts#L63
@@ -92,7 +86,7 @@ impl TransferRewardsArgs {
             .get_leader_schedule_with_config(
                 Some(previous_epoch_first_slot),
                 RpcLeaderScheduleConfig {
-                    identity: Some("SDEVqCDyc3YzjrDn375SMWKpZo1m7tbZ12fsenF48x1".to_string()), // TODO(sk): Replace with identity_pubkey
+                    identity: Some("SDEVqCDyc3YzjrDn375SMWKpZo1m7tbZ12fsenF48x1".to_string()), // TODO(sk): Remove hard coded identity
                     commitment: None,
                 },
             )
@@ -106,7 +100,7 @@ impl TransferRewardsArgs {
 
         let relative_leader_slots = previous_epoch_leader_schedule
             .unwrap()
-            .get("SDEVqCDyc3YzjrDn375SMWKpZo1m7tbZ12fsenF48x1")
+            .get("SDEVqCDyc3YzjrDn375SMWKpZo1m7tbZ12fsenF48x1") // TODO(sk): Remove hard coded identity
             .unwrap_or(&vec![])
             .to_vec();
 
@@ -194,14 +188,6 @@ impl TransferRewardsArgs {
         let stake_pool: StakePool =
             StakePool::deserialize(&mut stake_pool_account.data.as_slice()).unwrap();
 
-        let validator_list_account = rpc.get_account(&stake_pool.validator_list).await.unwrap();
-
-        let ValidatorList { validators, .. } =
-            <ValidatorList as borsh::BorshDeserialize>::deserialize(
-                &mut validator_list_account.data.as_slice(),
-            )
-            .unwrap();
-
         let StakePool {
             validator_list,
             reserve_stake,
@@ -216,25 +202,44 @@ impl TransferRewardsArgs {
         }
         .run_for_prog(&stake_pool_program_id);
 
-        let final_ixs = vec![update_stake_pool_balance_ix_with_program_id(
-            stake_pool_program_id,
-            UpdateStakePoolBalanceKeys {
-                stake_pool: stake_pool_pubkey,
-                withdraw_authority,
-                validator_list,
-                reserve_stake,
-                manager_fee_account,
-                pool_mint,
-                token_program,
-            },
-        )
-        .unwrap()];
+        let final_ixs = vec![
+            // Transfer rewards to Stake Pool reserve
+            transfer(
+                &identity_pubkey,
+                &stake_pool.reserve_stake,
+                lst_rewards.try_into().unwrap(),
+            ),
+            // Update stake pool balance
+            update_stake_pool_balance_ix_with_program_id(
+                stake_pool_program_id,
+                UpdateStakePoolBalanceKeys {
+                    stake_pool: stake_pool_pubkey,
+                    withdraw_authority,
+                    validator_list,
+                    reserve_stake,
+                    manager_fee_account,
+                    pool_mint,
+                    token_program,
+                },
+            )
+            .unwrap(),
+        ];
 
         let final_ixs = match send_mode {
             TxSendMode::DumpMsg => final_ixs,
-            _ => with_auto_cb_ixs(&rpc, &payer.pubkey(), final_ixs, &[], fee_limit_cb).await,
+            _ => {
+                with_auto_cb_ixs(
+                    &rpc,
+                    &identity_keypair.pubkey(),
+                    final_ixs,
+                    &[],
+                    fee_limit_cb,
+                )
+                .await
+            }
         };
-        eprintln!("Sending final update tx");
-        handle_tx_full(&rpc, send_mode, &final_ixs, &[], &mut [&payer]).await;
+
+        println!("Final transaction: ");
+        handle_tx_full(&rpc, send_mode, &final_ixs, &[], &mut [&identity_keypair]).await;
     }
 }
