@@ -7,15 +7,21 @@ edition = "2021"
 name = "blockrewards"
 path = "src/main.rs"
 
+
 [dependencies]
 clap = { version = "^4", features = ["derive"] }
 tokio = { version = "^1", features = ["rt-multi-thread"] }
+borsh = "0.10.3"
 
 # sanctum solana utils
 sanctum-solana-cli-utils = { features = ["clap"], git = "https://github.com/igneous-labs/sanctum-solana-utils" }
 sanctum-solana-client-utils = { git = "https://github.com/igneous-labs/sanctum-solana-utils" }
-solana-client = "2.1.13"
-solana-sdk = "2.1.13"
+spl_stake_pool_interface = { features = ["serde"], git = "https://github.com/igneous-labs/sanctum-solana-utils" }
+sanctum-spl-stake-pool-lib = { git = "https://github.com/igneous-labs/sanctum-solana-utils" }
+solana-readonly-account = { git = "https://github.com/igneous-labs/sanctum-solana-utils" }
+
+solana-client = ">=1.18"
+solana-sdk = ">=1.18"
 indicatif = "0.17.11"
 
 
