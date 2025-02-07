@@ -35,19 +35,19 @@ pub struct TransferRewardsArgs {
 
     #[arg(long, short, help = "The stake pool account linked to your LST")]
     pub stake_pool_pubkey: String,
-    // #[arg(
-    //     long,
-    //     short,
-    //     help = "The percentage of total rewards to consider as rewards for the stake pool (in basis points)"
-    // )]
-    // pub total_rewards_pct: u64,
+    #[arg(
+        long,
+        short,
+        help = "The percentage of total rewards to consider as rewards for the stake pool (in basis points)"
+    )]
+    pub total_rewards_pct: u64,
 
-    // #[arg(
-    //     long,
-    //     short,
-    //     help = "The percentage of stake pool rewards to distribute among LST holders (in basis points)"
-    // )]
-    // pub lst_rewards_pct: u64,
+    #[arg(
+        long,
+        short,
+        help = "The percentage of stake pool rewards to distribute among LST holders (in basis points)"
+    )]
+    pub lst_rewards_pct: u64,
 }
 
 impl TransferRewardsArgs {
@@ -55,8 +55,8 @@ impl TransferRewardsArgs {
         let Self {
             identity_keypair_path,
             stake_pool_pubkey,
-            // total_rewards_pct,
-            // lst_rewards_pct,
+            total_rewards_pct,
+            lst_rewards_pct,
         } = match args.subcmd {
             Subcmd::TransferRewards(a) => a,
         };
