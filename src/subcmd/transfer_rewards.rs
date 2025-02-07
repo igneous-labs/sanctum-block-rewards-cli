@@ -86,7 +86,7 @@ impl TransferRewardsArgs {
             .get_leader_schedule_with_config(
                 Some(previous_epoch_first_slot),
                 RpcLeaderScheduleConfig {
-                    identity: Some("SDEVqCDyc3YzjrDn375SMWKpZo1m7tbZ12fsenF48x1".to_string()), // TODO(sk): Remove hard coded identity
+                    identity: Some("JupRhwjrF5fAcs6dFhLH59r3TJFvbcyLP2NRM8UGH9H".to_string()), // TODO(sk): Remove hard coded identity
                     commitment: None,
                 },
             )
@@ -100,7 +100,7 @@ impl TransferRewardsArgs {
 
         let relative_leader_slots = previous_epoch_leader_schedule
             .unwrap()
-            .get("SDEVqCDyc3YzjrDn375SMWKpZo1m7tbZ12fsenF48x1") // TODO(sk): Remove hard coded identity
+            .get("JupRhwjrF5fAcs6dFhLH59r3TJFvbcyLP2NRM8UGH9H") // TODO(sk): Remove hard coded identity
             .unwrap_or(&vec![])
             .to_vec();
 
@@ -120,50 +120,40 @@ impl TransferRewardsArgs {
             .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
             .progress_chars("#>-"));
 
-        // Arcs to share across threads
-        let pb = Arc::new(pb);
-        let rpc = Arc::new(rpc);
+        let mut total_rewards = 0u64;
+        let mut slot_counter = 0;
 
-        let reward_lamports = std::sync::atomic::AtomicU64::new(0);
+        for &leader_slot in relative_leader_slots.iter() {
+            let absolute_slot = previous_epoch_first_slot + leader_slot as u64;
 
-        // Split the leader slots into chunks of `SLOT_CHUNK_SIZE` slots and process them in parallel
-        let chunks = relative_leader_slots.chunks(SLOT_CHUNK_SIZE);
-
-        for chunk in chunks {
-            let futures = chunk.iter().map(|&leader_slot| {
-                let rpc = rpc.clone();
-                let reward_lamports = &reward_lamports;
-                let pb = pb.clone();
-                async move {
-                    let absolute_slot = previous_epoch_first_slot + leader_slot as u64;
-
-                    if let Ok(block) = rpc
-                        .get_block_with_config(
-                            absolute_slot,
-                            RpcBlockConfig {
-                                rewards: Some(true),
-                                commitment: Some(CommitmentConfig::confirmed()),
-                                max_supported_transaction_version: Some(0),
-                                ..Default::default()
-                            },
-                        )
-                        .await
-                    {
-                        if let Some(rewards) = block.rewards {
-                            let chunk_rewards: u64 =
-                                rewards.iter().map(|reward| reward.lamports as u64).sum();
-                            reward_lamports
-                                .fetch_add(chunk_rewards, std::sync::atomic::Ordering::Relaxed);
-                        }
-                    }
-                    pb.inc(1);
+            if let Ok(block) = rpc
+                .get_block_with_config(
+                    absolute_slot,
+                    RpcBlockConfig {
+                        rewards: Some(true),
+                        commitment: Some(CommitmentConfig::confirmed()),
+                        max_supported_transaction_version: Some(0),
+                        transaction_details: None,
+                        ..Default::default()
+                    },
+                )
+                .await
+            {
+                if let Some(rewards) = block.rewards {
+                    let slot_rewards: u64 =
+                        rewards.iter().map(|reward| reward.lamports as u64).sum();
+                    total_rewards += slot_rewards;
                 }
-            });
+            }
+            pb.inc(1);
 
-            futures::future::join_all(futures).await;
+            // Sleep after every 10 slots to avoid rate limiting
+            slot_counter += 1;
+            if slot_counter % 10 == 0 {
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
         }
 
-        let total_rewards = reward_lamports.load(std::sync::atomic::Ordering::Relaxed);
         println!("Total reward lamports: {}", total_rewards);
 
         // Calculate stake pool's share (total_rewards_pct is in basis points - 1/100th of a percent)
