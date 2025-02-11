@@ -5,10 +5,10 @@ use serde_json::Value;
 use std::{fs::File, path::Path};
 
 use crate::{
-    get_rewards_file_path, handle_tx_full, input_with_validation, print_transfer_summary,
-    subcmd::Subcmd, transfer_to_reserve_and_update_stake_pool_balance_ixs, validate_bps,
-    validate_epoch, validate_pubkey, validate_rpc_url, with_auto_cb_ixs, PrintTransferSummaryArgs,
-    SOLANA_PUBLIC_RPC,
+    checked_pct, get_rewards_file_path, handle_tx_full, input_with_validation,
+    print_transfer_summary, subcmd::Subcmd, transfer_to_reserve_and_update_stake_pool_balance_ixs,
+    validate_bps, validate_epoch, validate_pubkey, validate_rpc_url, with_auto_cb_ixs,
+    PrintTransferSummaryArgs, SOLANA_PUBLIC_RPC,
 };
 use clap::{command, Args};
 use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner, TxSendMode};
@@ -178,11 +178,23 @@ impl TransferArgs {
         }
         let lst_rewards_bps = lst_rewards_bps_result.unwrap();
 
-        // Calculate stake pool's share (total_rewards_bps is in basis points - 1/100th of a percent)
-        let stake_pool_rewards = (total_block_rewards as u64 * total_rewards_bps as u64) / 10_000;
+        // Calculate stake pool's share
+        let stake_pool_rewards = match checked_pct(total_block_rewards, total_rewards_bps) {
+            Some(rewards) => rewards,
+            None => {
+                println!("{}", "Error: Error in calculating stake pool rewards".red());
+                return;
+            }
+        };
 
         // Calculate LST holders' share
-        let lst_rewards = (stake_pool_rewards * lst_rewards_bps as u64) / 10_000;
+        let lst_rewards = match checked_pct(stake_pool_rewards, lst_rewards_bps) {
+            Some(rewards) => rewards,
+            None => {
+                println!("{}", "Error: Overflow in calculating LST rewards".red());
+                return;
+            }
+        };
 
         println!("{}", "=".repeat(80));
 

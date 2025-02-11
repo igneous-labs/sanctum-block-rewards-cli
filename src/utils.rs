@@ -15,6 +15,12 @@ pub fn get_rewards_file_path(identity_pubkey: &Pubkey, epoch: u64) -> String {
     rewards_file_path
 }
 
+pub fn checked_pct(value: u64, bps: u64) -> Option<u64> {
+    value
+        .checked_mul(bps)
+        .and_then(|result| result.checked_div(10_000))
+}
+
 pub fn input_with_validation<T, F>(
     message: &str,
     placeholder: &str,

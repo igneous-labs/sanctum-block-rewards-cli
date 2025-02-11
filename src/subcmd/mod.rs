@@ -1,13 +1,11 @@
 use clap::Subcommand;
 
 mod calculate;
-mod share;
 mod sign;
 mod transfer;
 mod verify;
 
 pub use calculate::*;
-pub use share::*;
 pub use sign::*;
 pub use transfer::*;
 pub use verify::*;
@@ -16,7 +14,6 @@ pub use verify::*;
 pub enum Subcmd {
     Transfer(TransferArgs),
     Calculate(CalculateArgs),
-    Share(ShareArgs),
     Sign(SignArgs),
     Verify(VerifyArgs),
 }
@@ -26,7 +23,6 @@ impl Subcmd {
         match args.subcmd {
             Self::Transfer(_) => TransferArgs::run(args).await,
             Self::Calculate(_) => CalculateArgs::run(args).await,
-            Self::Share(_) => ShareArgs::run(args).await,
             Self::Sign(_) => SignArgs::run(args).await,
             Self::Verify(_) => VerifyArgs::run(args).await,
         }
