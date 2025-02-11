@@ -60,7 +60,6 @@ pub async fn with_auto_cb_ixs(
     ixs
 }
 
-/// First signer in signers is transaction payer
 pub async fn handle_tx_full(
     rpc: &RpcClient,
     send_mode: TxSendMode,
@@ -141,7 +140,10 @@ pub async fn get_leader_slots_for_identity(
     return Ok(leader_slots);
 }
 
-pub async fn get_total_block_rewards_for_slots(rpc: &RpcClient, slots: &[u64]) -> u64 {
+pub async fn get_total_block_rewards_for_slots(
+    rpc: &RpcClient,
+    slots: &[u64],
+) -> Result<u64, String> {
     let mut total_rewards = 0u64;
 
     let pb = ProgressBar::new(slots.len() as u64);
@@ -151,7 +153,7 @@ pub async fn get_total_block_rewards_for_slots(rpc: &RpcClient, slots: &[u64]) -
             .progress_chars("#>-"));
 
     for &slot in slots.iter() {
-        let block = rpc
+        let get_block_result = rpc
             .get_block_with_config(
                 slot as u64,
                 RpcBlockConfig {
@@ -162,8 +164,16 @@ pub async fn get_total_block_rewards_for_slots(rpc: &RpcClient, slots: &[u64]) -
                     ..Default::default()
                 },
             )
-            .await
-            .unwrap();
+            .await;
+
+        if let Err(e) = get_block_result {
+            return Err(format!(
+                "Error: Failed to fetch block for slot {}: {}",
+                slot, e
+            ));
+        }
+
+        let block = get_block_result.unwrap();
 
         if let Some(rewards) = block.rewards {
             let slot_rewards: u64 = rewards.iter().map(|reward| reward.lamports as u64).sum();
@@ -173,7 +183,7 @@ pub async fn get_total_block_rewards_for_slots(rpc: &RpcClient, slots: &[u64]) -
         pb.inc(1);
     }
 
-    total_rewards
+    Ok(total_rewards)
 }
 
 pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
@@ -181,13 +191,29 @@ pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
     identity_pubkey: &Pubkey,
     stake_pool_pubkey: &Pubkey,
     lst_rewards: u64,
-) -> Vec<Instruction> {
-    let stake_pool_account = rpc.get_account(&stake_pool_pubkey).await.unwrap();
+) -> Result<Vec<Instruction>, String> {
+    let stake_pool_account = rpc.get_account(&stake_pool_pubkey).await;
+    if stake_pool_account.is_err() {
+        return Err(format!(
+            "Error: Failed to fetch stake pool account: {}",
+            stake_pool_account.err().unwrap()
+        ));
+    }
+
+    let stake_pool_account = stake_pool_account.unwrap();
 
     let stake_pool_program_id = stake_pool_account.owner;
 
-    let stake_pool: StakePool =
-        StakePool::deserialize(&mut stake_pool_account.data.as_slice()).unwrap();
+    let stake_pool = StakePool::deserialize(&mut stake_pool_account.data.as_slice());
+
+    if stake_pool.is_err() {
+        return Err(format!(
+            "Error: Failed to deserialize stake pool: {}",
+            stake_pool.err().unwrap()
+        ));
+    }
+
+    let stake_pool = stake_pool.unwrap();
 
     let StakePool {
         validator_list,
@@ -226,5 +252,5 @@ pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
         .unwrap(),
     ];
 
-    final_ixs
+    Ok(final_ixs)
 }

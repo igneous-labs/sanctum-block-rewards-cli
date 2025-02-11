@@ -191,6 +191,12 @@ impl CalculateArgs {
         println!("{}", "=".repeat(80));
 
         let total_block_rewards = get_total_block_rewards_for_slots(&rpc, &leader_slots).await;
+        if total_block_rewards.is_err() {
+            println!("{}", total_block_rewards.err().unwrap());
+            return;
+        }
+
+        let total_block_rewards = total_block_rewards.unwrap();
         let total_block_rewards_sol = lamports_to_pretty_sol(total_block_rewards);
 
         // Create all parent directories if they don't exist

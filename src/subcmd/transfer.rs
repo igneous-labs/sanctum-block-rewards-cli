@@ -241,6 +241,13 @@ impl TransferArgs {
         )
         .await;
 
+        if final_ixs.is_err() {
+            println!("{}", final_ixs.err().unwrap());
+            return;
+        }
+
+        let final_ixs = final_ixs.unwrap();
+
         let final_ixs = match send_mode {
             TxSendMode::DumpMsg => final_ixs,
             _ => with_auto_cb_ixs(&rpc, &identity_pubkey, final_ixs, &[], fee_limit_cb).await,
