@@ -1,11 +1,16 @@
+mod solana_utils;
 mod subcmd;
-mod tx_utils;
+mod utils;
 
-use clap::{builder::ValueParser, Parser};
-use sanctum_solana_cli_utils::{ConfigWrapper, TxSendMode};
+use clap::Parser;
+use sanctum_solana_cli_utils::TxSendMode;
 
+use solana_sdk::commitment_config::CommitmentConfig;
+pub use solana_utils::*;
 pub use subcmd::*;
-pub use tx_utils::*;
+pub use utils::*;
+
+pub const SOLANA_PUBLIC_RPC: &str = "https://api.mainnet-beta.solana.com";
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Sanctum Block Rewards CLI")]
@@ -13,11 +18,18 @@ pub struct Args {
     #[arg(
         long,
         short,
-        help = "Path to solana CLI config. Defaults to solana cli default if not provided",
-        default_value = "",
-        value_parser = ValueParser::new(ConfigWrapper::parse_from_path)
+        help = "RPC URL to use for all requests. Defaults to the Solana public RPC if not provided"
     )]
-    pub config: ConfigWrapper,
+    pub rpc_url: Option<String>,
+
+    #[arg(
+        long,
+        short,
+        help = "Commitment level to use for RPC calls. Defaults to confirmed if not provided",
+        default_value = "confirmed",
+        value_enum
+    )]
+    pub commitment: Option<CommitmentConfig>,
 
     #[arg(
         long,

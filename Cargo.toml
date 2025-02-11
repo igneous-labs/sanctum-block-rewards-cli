@@ -11,7 +11,15 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "^4", features = ["derive"] }
 tokio = { version = "^1", features = ["rt-multi-thread"] }
-borsh = "0.10.3"
+borsh = "^1"
+indicatif = "0.17.11"
+futures = "0.3.31"
+inquire = "0.7.5"
+colored = "3.0.0"
+spinners = "4.1.1"
+dirs-next = "2.0.0"
+serde_json = "1.0.138"
+
 
 # sanctum solana utils
 sanctum-solana-cli-utils = { features = ["clap"], git = "https://github.com/igneous-labs/sanctum-solana-utils" }
@@ -22,7 +30,7 @@ solana-readonly-account = { git = "https://github.com/igneous-labs/sanctum-solan
 
 solana-client = ">=1.18"
 solana-sdk = ">=1.18"
-indicatif = "0.17.11"
-futures = "0.3.31"
+comfy-table = "7.1.4"
+
 
 
