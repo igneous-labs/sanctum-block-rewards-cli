@@ -1,6 +1,8 @@
 use colored::Colorize;
 use comfy_table::{Attribute, Cell, Color, Table};
 use inquire::Text;
+use reqwest;
+use serde::Deserialize;
 use solana_sdk::{native_token::LAMPORTS_PER_SOL, pubkey::Pubkey};
 use std::str::FromStr;
 
@@ -191,4 +193,51 @@ pub fn print_transfer_summary(args: PrintTransferSummaryArgs) {
             .red()
             .bold()
     );
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct Pool {
+    #[serde(default)]
+    pool: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct LstInfo {
+    name: String,
+    symbol: String,
+    #[serde(default)]
+    pool: Pool,
+}
+
+#[derive(Debug, Deserialize)]
+struct LstList {
+    sanctum_lst_list: Vec<LstInfo>,
+}
+
+pub async fn get_lst_info(pool_pubkey: &str) -> Result<(String, String), String> {
+    // Fetch TOML content from GitHub
+    let url = "https://raw.githubusercontent.com/igneous-labs/sanctum-lst-list/refs/heads/master/sanctum-lst-list.toml";
+    let response = reqwest::get(url)
+        .await
+        .map_err(|e| format!("Failed to fetch TOML: {}", e))?;
+
+    let toml_content = response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    // Parse TOML
+    let lst_list: LstList =
+        toml::from_str(&toml_content).map_err(|e| format!("Failed to parse TOML: {}", e))?;
+
+    // Find matching pool
+    for lst in lst_list.sanctum_lst_list {
+        if let Some(pool_str) = lst.pool.pool {
+            if pool_str == pool_pubkey {
+                return Ok((lst.name, lst.symbol));
+            }
+        }
+    }
+
+    Err(format!("No LST found for pool {}", pool_pubkey))
 }

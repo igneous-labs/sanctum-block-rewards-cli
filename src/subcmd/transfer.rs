@@ -5,7 +5,7 @@ use serde_json::Value;
 use std::{fs::File, path::Path};
 
 use crate::{
-    checked_pct, get_rewards_file_path, handle_tx_full, input_with_validation,
+    checked_pct, get_lst_info, get_rewards_file_path, handle_tx_full, input_with_validation,
     print_transfer_summary, subcmd::Subcmd, transfer_to_reserve_and_update_stake_pool_balance_ixs,
     validate_bps, validate_epoch, validate_pubkey, validate_rpc_url, with_auto_cb_ixs,
     PrintTransferSummaryArgs, SOLANA_PUBLIC_RPC,
@@ -147,6 +147,17 @@ impl TransferArgs {
 
         let stake_pool_pubkey = stake_pool_pubkey_result.unwrap();
 
+        let lst_info = get_lst_info(&stake_pool_pubkey.to_string()).await;
+        if lst_info.is_err() {
+            println!(
+                "{}",
+                "⚠ We could not find a LST for the specified address".yellow()
+            );
+            return;
+        }
+
+        let (lst_name, lst_symbol) = lst_info.unwrap();
+
         let total_rewards_bps_result = input_with_validation(
             "Enter the percentage of stake you want to consider for calculating the block rewards:",
             "75",
@@ -203,14 +214,17 @@ impl TransferArgs {
             lst_rewards,
         });
 
-        let ans = Confirm::new(
-            &"Do you wish to continue with the transfer?"
-                .blue()
-                .bold()
-                .to_string(),
-        )
-        .with_default(true)
-        .prompt();
+        println!("{}", "=".repeat(80));
+
+        let confirm_message = format!(
+            "Do you wish to continue to transfer your block rewards to {} ({})?",
+            lst_name.magenta(),
+            lst_symbol.magenta()
+        );
+
+        let ans = Confirm::new(&confirm_message.blue().bold().to_string())
+            .with_default(true)
+            .prompt();
 
         match ans {
             Ok(false) => {
