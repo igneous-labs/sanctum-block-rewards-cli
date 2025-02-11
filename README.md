@@ -65,3 +65,23 @@ This command:
 - Loads previously calculated rewards data
 - Transfers the specified percentage of rewards to the stake pool reserve
 - Updates stake pool balance by calling `UpdateStakePoolBalance` instruction
+
+### `sign`
+
+```bash
+Sign message to endorse your Sanctum LST
+
+Usage: blockrewards sign --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
+
+Options:
+      --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
+          The identity keypair for your validator
+
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+This command:
+- Prompts the user to sign the message
+- Prints the signed message
+- Reach out to us on Telegram @fp_lee with your signed message
