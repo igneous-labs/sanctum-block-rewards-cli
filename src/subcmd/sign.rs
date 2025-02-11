@@ -37,7 +37,7 @@ impl SignArgs {
 
         println!(
             "{}",
-            format!("Reach out to us on Telegram with your signed message @sanctumso")
+            format!("Reach out to us on Telegram @fp_lee with your signed message")
                 .blue()
                 .bold()
         );
