@@ -2,7 +2,8 @@ use std::{fs::File, path::Path};
 
 use crate::{
     get_leader_slots_for_identity, get_rewards_file_path, get_total_block_rewards_for_slots,
-    input_with_validation, subcmd::Subcmd, validate_epoch, validate_rpc_url, SOLANA_PUBLIC_RPC,
+    input_with_validation, lamports_to_pretty_sol, subcmd::Subcmd, validate_epoch,
+    validate_rpc_url, SOLANA_PUBLIC_RPC,
 };
 use clap::{command, Args};
 use colored::Colorize;
@@ -85,9 +86,8 @@ impl CalculateArgs {
         if Path::new(&rewards_file_path).exists() {
             let rewards_file = File::open(rewards_file_path.clone()).unwrap();
             let rewards: Value = serde_json::from_reader(rewards_file).unwrap();
-            // convert rewards in SOL and display
             let total_block_rewards_sol =
-                rewards["total_block_rewards"].as_u64().unwrap() as f64 / LAMPORTS_PER_SOL as f64;
+                lamports_to_pretty_sol(rewards["total_block_rewards"].as_u64().unwrap());
 
             println!(
                 "{}",
@@ -170,7 +170,7 @@ impl CalculateArgs {
         println!("{}", "=".repeat(80));
 
         let total_block_rewards = get_total_block_rewards_for_slots(&rpc, &leader_slots).await;
-        let total_block_rewards_sol = total_block_rewards as f64 / LAMPORTS_PER_SOL as f64;
+        let total_block_rewards_sol = lamports_to_pretty_sol(total_block_rewards);
 
         // Create all parent directories if they don't exist
         if let Some(parent) = Path::new(&rewards_file_path).parent() {

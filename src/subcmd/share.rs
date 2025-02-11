@@ -4,7 +4,9 @@ use crate::{
     transfer_to_reserve_and_update_stake_pool_balance_ixs, with_auto_cb_ixs,
     PrintTransferSummaryArgs, SOLANA_PUBLIC_RPC,
 };
-use crate::{validate_bps, validate_epoch, validate_pubkey, validate_rpc_url};
+use crate::{
+    lamports_to_pretty_sol, validate_bps, validate_epoch, validate_pubkey, validate_rpc_url,
+};
 use clap::{command, Args};
 use colored::Colorize;
 use inquire::Confirm;
@@ -173,7 +175,7 @@ impl ShareArgs {
 
             let total_block_rewards = get_total_block_rewards_for_slots(&rpc, &leader_slots).await;
 
-            let total_block_rewards_sol = total_block_rewards as f64 / LAMPORTS_PER_SOL as f64;
+            let total_block_rewards_sol = lamports_to_pretty_sol(total_block_rewards);
 
             // Create all parent directories if they don't exist
             if let Some(parent) = Path::new(&rewards_file_path).parent() {

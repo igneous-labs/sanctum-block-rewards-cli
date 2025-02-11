@@ -111,6 +111,10 @@ pub fn validate_pubkey(input: &str) -> Result<Pubkey, String> {
     }
 }
 
+pub fn lamports_to_pretty_sol(lamports: u64) -> f64 {
+    (lamports as f64 / LAMPORTS_PER_SOL as f64 * 1000.0).round() / 1000.0
+}
+
 pub struct PrintTransferSummaryArgs {
     pub epoch: u64,
     pub identity_balance: u64,
@@ -132,10 +136,10 @@ pub fn print_transfer_summary(args: PrintTransferSummaryArgs) {
         lst_rewards,
     } = args;
 
-    let total_block_rewards_sol = total_block_rewards as f64 / LAMPORTS_PER_SOL as f64;
-    let stake_pool_rewards_sol = stake_pool_rewards as f64 / LAMPORTS_PER_SOL as f64;
-    let lst_rewards_sol = lst_rewards as f64 / LAMPORTS_PER_SOL as f64;
-    let balance_sol = identity_balance as f64 / LAMPORTS_PER_SOL as f64;
+    let total_block_rewards_sol = lamports_to_pretty_sol(total_block_rewards);
+    let stake_pool_rewards_sol = lamports_to_pretty_sol(stake_pool_rewards);
+    let lst_rewards_sol = lamports_to_pretty_sol(lst_rewards);
+    let balance_sol = lamports_to_pretty_sol(identity_balance);
 
     let mut table = Table::new();
     table
