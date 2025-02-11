@@ -76,12 +76,17 @@ impl CalculateArgs {
 
         println!("{}", "=".repeat(80));
 
-        // identity keypair, which will also be used as payer
         let identity_keypair = parse_named_signer(ParseNamedSigner {
             name: "identity",
             arg: &identity_keypair_path,
-        })
-        .unwrap();
+        });
+
+        if identity_keypair.is_err() {
+            println!("{}", format!("Error: Invalid identity keypair").red());
+            return;
+        }
+
+        let identity_keypair = identity_keypair.unwrap();
 
         let identity_pubkey = identity_keypair.pubkey();
 
@@ -128,6 +133,16 @@ impl CalculateArgs {
 
         let leader_slots =
             get_leader_slots_for_identity(&rpc, epoch, &epoch_schedule, &identity_pubkey).await;
+
+        if leader_slots.is_err() {
+            println!(
+                "{}",
+                format!("Error: {}", leader_slots.err().unwrap()).red()
+            );
+            return;
+        }
+
+        let leader_slots = leader_slots.unwrap();
 
         let num_leader_slots = leader_slots.len();
         sp.stop_with_message(

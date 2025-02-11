@@ -98,28 +98,36 @@ pub async fn get_leader_slots_for_identity(
     rpc: &RpcClient,
     epoch: u64,
     epoch_schedule: &EpochSchedule,
-    _identity_pubkey: &Pubkey,
-) -> Vec<u64> {
+    identity_pubkey: &Pubkey,
+) -> Result<Vec<u64>, String> {
     let epoch_first_slot = get_first_slot_of_epoch(epoch, epoch_schedule);
 
     let epoch_leader_schedule = rpc
         .get_leader_schedule_with_config(
             Some(epoch_first_slot),
             RpcLeaderScheduleConfig {
-                identity: Some("SDEVqCDyc3YzjrDn375SMWKpZo1m7tbZ12fsenF48x1".to_string()), // TODO(sk): Remove hard coded identity
+                identity: Some(identity_pubkey.to_string()), // TODO(sk): Remove hard coded identity
                 commitment: Some(rpc.commitment()),
             },
         )
-        .await
-        .unwrap();
+        .await;
+
+    if epoch_leader_schedule.is_err() {
+        return Err(format!(
+            "Error: Failed to fetch leader slots for epoch {}",
+            epoch
+        ));
+    }
+
+    let epoch_leader_schedule = epoch_leader_schedule.unwrap();
 
     if epoch_leader_schedule.is_none() {
-        return [].to_vec();
+        return Ok([].to_vec());
     }
 
     let relative_leader_slots = epoch_leader_schedule
         .unwrap()
-        .get("SDEVqCDyc3YzjrDn375SMWKpZo1m7tbZ12fsenF48x1")
+        .get(&identity_pubkey.to_string())
         .unwrap_or(&vec![])
         .to_vec();
 
@@ -130,7 +138,7 @@ pub async fn get_leader_slots_for_identity(
         leader_slots.push(absolute_slot);
     }
 
-    return leader_slots;
+    return Ok(leader_slots);
 }
 
 pub async fn get_total_block_rewards_for_slots(rpc: &RpcClient, slots: &[u64]) -> u64 {

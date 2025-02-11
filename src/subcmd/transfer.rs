@@ -73,12 +73,17 @@ impl TransferArgs {
             args.commitment.unwrap_or(CommitmentConfig::confirmed()),
         );
 
-        // identity keypair, which will also be used as payer
         let identity_keypair = parse_named_signer(ParseNamedSigner {
             name: "identity",
             arg: &identity_keypair_path,
-        })
-        .unwrap();
+        });
+
+        if identity_keypair.is_err() {
+            println!("{}", format!("Error: Invalid identity keypair").red());
+            return;
+        }
+
+        let identity_keypair = identity_keypair.unwrap();
 
         let identity_pubkey = identity_keypair.pubkey();
 
