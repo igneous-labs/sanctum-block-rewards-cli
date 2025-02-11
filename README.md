@@ -5,7 +5,7 @@ A command-line tool for Solana validators to manage and distribute block rewards
 ## Installation
 
 ```bash
-cargo install sanctum-block-rewards-cli
+cargo install blockrewards
 ```
 
 ## Commands
