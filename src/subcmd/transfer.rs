@@ -27,7 +27,10 @@ pub struct TransferArgs {
     #[arg(long, help = "The stake pool account linked to your LST")]
     pub stake_pool_pubkey: Option<String>,
 
-    #[arg(long, help = "Percentage of total stake allocated for the LST")]
+    #[arg(
+        long,
+        help = "Percentage of stake you want to consider for calculating the block rewards"
+    )]
     pub total_rewards_pct: Option<u64>,
 
     #[arg(long, help = "Percentage of block rewards to share to LST holders")]
@@ -145,7 +148,7 @@ impl TransferArgs {
         let stake_pool_pubkey = stake_pool_pubkey_result.unwrap();
 
         let total_rewards_bps_result = input_with_validation(
-            "Enter the percentage of LST-allocated stake:",
+            "Enter the percentage of stake you want to consider for calculating the block rewards:",
             "75",
             None,
             total_rewards_pct.map(|bps| bps.to_string()),

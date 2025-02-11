@@ -52,7 +52,7 @@ Options:
           The stake pool account linked to your LST
 
       --total-rewards-pct <TOTAL_REWARDS_PCT>
-          Percentage of total stake allocated for the LST
+          Percentage of stake you want to consider for calculating the block rewards
 
       --lst-rewards-pct <LST_REWARDS_PCT>
           Percentage of block rewards to share to LST holders
