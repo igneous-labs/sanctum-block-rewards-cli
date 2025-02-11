@@ -7,7 +7,7 @@ use crate::ENDORSE_MESSAGE;
 use super::Subcmd;
 
 #[derive(Args, Debug)]
-#[command(long_about = "Deposit an activated stake account into a stake pool")]
+#[command(long_about = "Sign message to endorse your Sanctum LST")]
 pub struct SignArgs {
     #[arg(long, short, help = "The identity keypair for your validator")]
     pub identity_keypair_path: String,

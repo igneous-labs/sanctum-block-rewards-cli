@@ -5,7 +5,7 @@ use solana_sdk::signature::Signature;
 use crate::{input_with_validation, validate_pubkey, ENDORSE_MESSAGE};
 
 #[derive(Args, Debug)]
-#[command(long_about = "Deposit an activated stake account into a stake pool")]
+#[command(long_about = "Verify validator signed message")]
 pub struct VerifyArgs {}
 
 impl VerifyArgs {
