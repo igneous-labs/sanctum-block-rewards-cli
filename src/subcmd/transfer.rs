@@ -16,7 +16,7 @@ use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
 
 #[derive(Args, Debug)]
-#[command(long_about = "Deposit an activated stake account into a stake pool")]
+#[command(long_about = "Transfer block rewards to the stake pool reserve")]
 pub struct TransferArgs {
     #[arg(long, short, help = "The identity keypair for your validator")]
     pub identity_keypair_path: String,
