@@ -18,28 +18,20 @@ use solana_sdk::commitment_config::CommitmentConfig;
 #[derive(Args, Debug)]
 #[command(long_about = "Transfer block rewards to the stake pool reserve")]
 pub struct TransferArgs {
-    #[arg(long, short, help = "The identity keypair for your validator")]
+    #[arg(long, help = "The identity keypair for your validator")]
     pub identity_keypair_path: String,
 
     #[arg(long, help = "The epoch to calculate rewards for")]
     pub epoch: Option<u64>,
 
-    #[arg(long, short, help = "The stake pool account linked to your LST")]
+    #[arg(long, help = "The stake pool account linked to your LST")]
     pub stake_pool_pubkey: Option<String>,
 
-    #[arg(
-        long,
-        short,
-        help = "The percentage (in basis points) of total rewards to consider as rewards for the stake pool "
-    )]
-    pub total_rewards_bps: Option<u64>,
+    #[arg(long, help = "Percentage of total stake allocated for the LST")]
+    pub total_rewards_pct: Option<u64>,
 
-    #[arg(
-        long,
-        short,
-        help = "The percentage (in basis points) of stake pool rewards to distribute among LST holders"
-    )]
-    pub lst_rewards_bps: Option<u64>,
+    #[arg(long, help = "Percentage of block rewards to share to LST holders")]
+    pub lst_rewards_pct: Option<u64>,
 }
 
 impl TransferArgs {
@@ -48,8 +40,8 @@ impl TransferArgs {
             identity_keypair_path,
             epoch,
             stake_pool_pubkey,
-            total_rewards_bps,
-            lst_rewards_bps,
+            total_rewards_pct,
+            lst_rewards_pct,
         } = match args.subcmd {
             Subcmd::Transfer(a) => a,
             _ => unreachable!(),
@@ -156,7 +148,7 @@ impl TransferArgs {
             "Enter the percentage of LST-allocated stake:",
             "75",
             None,
-            total_rewards_bps.map(|bps| bps.to_string()),
+            total_rewards_pct.map(|bps| bps.to_string()),
             validate_bps,
         );
         if total_rewards_bps_result.is_err() {
@@ -169,7 +161,7 @@ impl TransferArgs {
             "Enter the percentage of block rewards to share:",
             "100",
             None,
-            lst_rewards_bps.map(|bps| bps.to_string()),
+            lst_rewards_pct.map(|bps| bps.to_string()),
             validate_bps,
         );
         if lst_rewards_bps_result.is_err() {

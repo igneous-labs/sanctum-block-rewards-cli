@@ -16,9 +16,11 @@ use spinners::{Spinner, Spinners};
 use tokio;
 
 #[derive(Args, Debug)]
-#[command(long_about = "Calculate block rewards for a particular epoch")]
+#[command(
+    long_about = "Calculate the total block rewards earned by your validator for a specific epoch."
+)]
 pub struct CalculateArgs {
-    #[arg(long, short, help = "The identity keypair of your validator")]
+    #[arg(long, help = "The identity keypair of your validator")]
     pub identity_keypair_path: String,
     #[arg(long, help = "The epoch to calculate rewards for")]
     pub epoch: Option<u64>,
