@@ -98,8 +98,7 @@ pub async fn get_leader_slots_for_identity(
     rpc: &RpcClient,
     epoch: u64,
     epoch_schedule: &EpochSchedule,
-    // TODO(sk): Remove hard coded identity
-    _identity_pubkey: &Pubkey,
+    identity_pubkey: &Pubkey,
 ) -> Vec<u64> {
     let epoch_first_slot = get_first_slot_of_epoch(epoch, epoch_schedule);
 
@@ -107,7 +106,7 @@ pub async fn get_leader_slots_for_identity(
         .get_leader_schedule_with_config(
             Some(epoch_first_slot),
             RpcLeaderScheduleConfig {
-                identity: Some("SDEVqCDyc3YzjrDn375SMWKpZo1m7tbZ12fsenF48x1".to_string()), // TODO(sk): Remove hard coded identity
+                identity: Some(identity_pubkey.to_string()),
                 commitment: Some(rpc.commitment()),
             },
         )
@@ -120,7 +119,7 @@ pub async fn get_leader_slots_for_identity(
 
     let relative_leader_slots = epoch_leader_schedule
         .unwrap()
-        .get("SDEVqCDyc3YzjrDn375SMWKpZo1m7tbZ12fsenF48x1")
+        .get(&identity_pubkey.to_string())
         .unwrap_or(&vec![])
         .to_vec();
 
