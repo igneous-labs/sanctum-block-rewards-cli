@@ -82,8 +82,15 @@ impl TransferArgs {
 
         let identity_pubkey = identity_keypair.pubkey();
 
-        let (current_epoch_info, identity_balance) =
-            tokio::try_join!(rpc.get_epoch_info(), rpc.get_balance(&identity_pubkey)).unwrap();
+        let rpc_call_result =
+            tokio::try_join!(rpc.get_epoch_info(), rpc.get_balance(&identity_pubkey));
+
+        if rpc_call_result.is_err() {
+            println!("{}", format!("Error: Failed to fetch data from RPC").red());
+            return;
+        }
+
+        let (current_epoch_info, identity_balance) = rpc_call_result.unwrap();
 
         let epoch_result = input_with_validation(
             "Enter the epoch to calculate rewards for:",

@@ -52,8 +52,14 @@ impl CalculateArgs {
             args.commitment.unwrap_or(CommitmentConfig::confirmed()),
         );
 
-        let (current_epoch_info, epoch_schedule) =
-            tokio::try_join!(rpc.get_epoch_info(), rpc.get_epoch_schedule()).unwrap();
+        let rpc_call_result = tokio::try_join!(rpc.get_epoch_info(), rpc.get_epoch_schedule());
+
+        if rpc_call_result.is_err() {
+            println!("{}", format!("Error: Failed to fetch data from RPC").red());
+            return;
+        }
+
+        let (current_epoch_info, epoch_schedule) = rpc_call_result.unwrap();
 
         let epoch_result = input_with_validation(
             "Enter the epoch to calculate rewards for:",
