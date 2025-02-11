@@ -229,9 +229,9 @@ impl ShareArgs {
         let stake_pool_pubkey = stake_pool_pubkey_result.unwrap();
 
         let total_rewards_bps_result = input_with_validation(
-            "Enter the percentage (in basis points) of total stake to consider as for the LST stake pool:",
-            "7500",
-            None,  // 10% default
+            "Enter the percentage of LST-allocated stake:",
+            "75",
+            None,
             total_rewards_bps.map(|bps| bps.to_string()),
             validate_bps,
         );
@@ -242,9 +242,9 @@ impl ShareArgs {
         let total_rewards_bps = total_rewards_bps_result.unwrap();
 
         let lst_rewards_bps_result = input_with_validation(
-            "Enter the percentage (in basis points) of stake pool rewards to distribute among LST holders:",
-            "10000",
-            None,  // 50% default
+            "Enter the percentage of block rewards to share:",
+            "100",
+            None,
             lst_rewards_bps.map(|bps| bps.to_string()),
             validate_bps,
         );

@@ -88,10 +88,14 @@ pub fn validate_rpc_url(input: &str) -> Result<String, String> {
 }
 
 pub fn validate_bps(input: &str) -> Result<u64, String> {
-    match input.parse::<u64>() {
-        Ok(bps) => {
+    // Parse the input as f64 to handle decimals
+    match input.parse::<f64>() {
+        Ok(percentage) => {
+            // Convert percentage to BPS (multiply by 100 to convert to basis points)
+            let bps = (percentage * 100.0).round() as u64;
+
             if bps > 10_000 {
-                Err("Error: BPS cannot exceed 10000 (100%)".to_string())
+                Err("Error: Percentage cannot exceed 100%".to_string())
             } else {
                 Ok(bps)
             }
@@ -133,12 +137,6 @@ pub fn print_transfer_summary(args: PrintTransferSummaryArgs) {
     let lst_rewards_sol = lst_rewards as f64 / LAMPORTS_PER_SOL as f64;
     let balance_sol = identity_balance as f64 / LAMPORTS_PER_SOL as f64;
 
-    println!(
-        "{}{}",
-        "Identity balance: ".blue().bold(),
-        format!("{} SOL", balance_sol).green().bold()
-    );
-
     let mut table = Table::new();
     table
         .set_header(vec![
@@ -157,24 +155,30 @@ pub fn print_transfer_summary(args: PrintTransferSummaryArgs) {
             Cell::new(format!("LST Rewards ({}%)", lst_rewards_bps as f64 / 100.0))
                 .add_attribute(Attribute::Bold)
                 .fg(Color::Blue),
-            Cell::new("Post Transfer Balance")
-                .add_attribute(Attribute::Bold)
-                .fg(Color::Blue),
         ])
         .add_row(vec![
             Cell::new(format!("{}", epoch)),
             Cell::new(format!("{} SOL", total_block_rewards_sol)),
             Cell::new(format!("{} SOL", stake_pool_rewards_sol)),
             Cell::new(format!("{} SOL", lst_rewards_sol)),
-            if balance_sol - lst_rewards_sol <= 10.0 {
-                Cell::new(format!("{} SOL", balance_sol - lst_rewards_sol))
-                    .add_attribute(Attribute::SlowBlink)
-                    .add_attribute(Attribute::Bold)
-                    .fg(Color::Red)
-            } else {
-                Cell::new(format!("{} SOL", balance_sol - lst_rewards_sol))
-            },
         ]);
 
     println!("{table}");
+
+    println!("{}", "=".repeat(80));
+
+    println!(
+        "{}{}",
+        "Pre Transfer balance: ".blue().bold(),
+        format!("{} SOL", balance_sol).green().bold()
+    );
+
+    // TODO(sk): conditional color
+    println!(
+        "{}{}",
+        "Post Transfer balance: ".blue().bold(),
+        format!("{} SOL", balance_sol - lst_rewards_sol)
+            .red()
+            .bold()
+    );
 }
