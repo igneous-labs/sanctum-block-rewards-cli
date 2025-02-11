@@ -13,7 +13,7 @@ use inquire::Confirm;
 use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner, TxSendMode};
 use serde_json::{json, Value};
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::{commitment_config::CommitmentConfig, native_token::LAMPORTS_PER_SOL};
+use solana_sdk::commitment_config::CommitmentConfig;
 use spinners::{Spinner, Spinners};
 use std::{fs::File, path::Path};
 use tokio;

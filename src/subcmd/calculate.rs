@@ -11,7 +11,7 @@ use inquire::Confirm;
 use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner};
 use serde_json::{json, Value};
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::{commitment_config::CommitmentConfig, native_token::LAMPORTS_PER_SOL};
+use solana_sdk::commitment_config::CommitmentConfig;
 use spinners::{Spinner, Spinners};
 use tokio;
 
