@@ -314,12 +314,6 @@ impl ShareArgs {
             println!("{}", "Transaction Message:".blue().bold());
         }
 
-        let tx_result =
-            handle_tx_full(&rpc, send_mode, &final_ixs, &[], &mut [&identity_keypair]).await;
-
-        if let Err(e) = tx_result {
-            println!("{}", format!("Error: {}", e).red());
-            return;
-        }
+        handle_tx_full(&rpc, send_mode, &final_ixs, &[], &mut [&identity_keypair]).await;
     }
 }

@@ -225,6 +225,7 @@ impl TransferArgs {
         if send_mode == TxSendMode::DumpMsg {
             println!("{}", "Transaction Message:".blue().bold());
         }
+
         handle_tx_full(&rpc, send_mode, &final_ixs, &[], &mut [&identity_keypair]).await;
     }
 }

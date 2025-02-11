@@ -9,7 +9,6 @@ use sanctum_solana_client_utils::{
 };
 use sanctum_spl_stake_pool_lib::{deserialize_stake_pool_checked, FindWithdrawAuthority};
 use solana_client::{
-    client_error::ClientError,
     nonblocking::rpc_client::RpcClient,
     rpc_config::{RpcBlockConfig, RpcLeaderScheduleConfig},
 };
@@ -68,7 +67,7 @@ pub async fn handle_tx_full(
     ixs: &[Instruction],
     luts: &[AddressLookupTableAccount],
     signers: &mut [&dyn Signer],
-) -> Result<(), ClientError> {
+) {
     let payer_pk = signers[0].pubkey();
     signers.sort_by_key(|s| s.pubkey());
     let RecentBlockhash { hash, .. } = rpc.get_confirmed_blockhash().await.unwrap();
@@ -82,7 +81,8 @@ pub async fn handle_tx_full(
             send_mode,
             HandleTxArgs::cli_default(),
         )
-        .await;
+        .await
+        .unwrap();
 }
 
 pub fn get_first_slot_of_epoch(epoch: u64, epoch_schedule: &EpochSchedule) -> u64 {

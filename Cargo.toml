@@ -19,6 +19,8 @@ colored = "3.0.0"
 spinners = "4.1.1"
 dirs-next = "2.0.0"
 serde_json = "1.0.138"
+comfy-table = "7.1.4"
+bs58 = "0.5.1"
 
 
 # sanctum solana utils
@@ -30,7 +32,7 @@ solana-readonly-account = { git = "https://github.com/igneous-labs/sanctum-solan
 
 solana-client = ">=1.18"
 solana-sdk = ">=1.18"
-comfy-table = "7.1.4"
+
 
 
 
