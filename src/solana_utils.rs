@@ -105,7 +105,7 @@ pub async fn get_leader_slots_for_identity(
         .get_leader_schedule_with_config(
             Some(epoch_first_slot),
             RpcLeaderScheduleConfig {
-                identity: Some(identity_pubkey.to_string()), // TODO(sk): Remove hard coded identity
+                identity: Some(identity_pubkey.to_string()),
                 commitment: Some(rpc.commitment()),
             },
         )
