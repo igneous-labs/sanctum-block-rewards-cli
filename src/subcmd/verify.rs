@@ -2,7 +2,7 @@ use clap::{command, Args};
 use colored::Colorize;
 use solana_sdk::signature::Signature;
 
-use crate::{input_with_validation, validate_pubkey, ENDORSE_MESSAGE};
+use crate::{input_string, input_with_validation, validate_pubkey, ENDORSE_MESSAGE};
 
 #[derive(Args, Debug)]
 #[command(long_about = "Verify validator signed message")]
@@ -24,13 +24,7 @@ impl VerifyArgs {
 
         let identity_pubkey = identity_pubkey.unwrap();
 
-        let signed_message = input_with_validation(
-            "Enter signed message",
-            "5KZiXZsDZ1...",
-            None,
-            None,
-            |input| Ok(input.to_string()),
-        );
+        let signed_message = input_string("Enter signed message", "5KZiXZsDZ1...", None, None);
         if signed_message.is_err() {
             println!("{}", format!("Error: Invalid signed message").red());
             return;

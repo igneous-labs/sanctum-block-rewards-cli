@@ -23,17 +23,13 @@ pub fn checked_pct(value: u64, bps: u64) -> Option<u64> {
         .and_then(|result| result.checked_div(10_000))
 }
 
-pub fn input_with_validation<T, F>(
+fn get_input(
     message: &str,
     placeholder: &str,
     initial_value: Option<String>,
     arg_value: Option<String>,
-    validator: F,
-) -> Result<T, String>
-where
-    F: Fn(&str) -> Result<T, String>,
-{
-    let input = if let Some(value) = arg_value {
+) -> String {
+    if let Some(value) = arg_value {
         value
     } else {
         let message_string = message.blue().bold().to_string();
@@ -54,14 +50,37 @@ where
                 .trim()
                 .to_string()
         }
-    };
+    }
+}
 
-    // If input is empty, return error
+pub fn input_string(
+    message: &str,
+    placeholder: &str,
+    initial_value: Option<String>,
+    arg_value: Option<String>,
+) -> Result<String, String> {
+    let input = get_input(message, placeholder, initial_value, arg_value);
+
     if input.is_empty() {
         return Err(String::from("Error: Please enter a value"));
     }
 
-    // Use the provided validator function
+    Ok(input)
+}
+
+pub fn input_with_validation<T>(
+    message: &str,
+    placeholder: &str,
+    initial_value: Option<String>,
+    arg_value: Option<String>,
+    validator: impl Fn(&str) -> Result<T, String>,
+) -> Result<T, String> {
+    let input = get_input(message, placeholder, initial_value, arg_value);
+
+    if input.is_empty() {
+        return Err(String::from("Error: Please enter a value"));
+    }
+
     validator(&input)
 }
 
@@ -185,13 +204,21 @@ pub fn print_transfer_summary(args: PrintTransferSummaryArgs) {
         format!("{} SOL", balance_sol).green().bold()
     );
 
-    // TODO(sk): conditional color
     println!(
         "{}{}",
         "Post Transfer balance: ".blue().bold(),
-        format!("{} SOL", balance_sol - lst_rewards_sol)
-            .red()
-            .bold()
+        {
+            let post_balance = balance_sol - lst_rewards_sol;
+            let formatted = format!("{} SOL", post_balance);
+            if post_balance >= 10.0 {
+                formatted.green()
+            } else if post_balance >= 3.0 {
+                formatted.yellow()
+            } else {
+                formatted.red()
+            }
+        }
+        .bold()
     );
 }
 
