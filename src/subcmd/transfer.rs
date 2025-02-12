@@ -58,7 +58,7 @@ impl TransferArgs {
             |input| validate_rpc_url(input),
         );
         if rpc_url_result.is_err() {
-            println!("{}", format!("Error: Invalid RPC URL").red());
+            println!("{}", "Error: Invalid RPC URL".red());
             return;
         }
         let rpc_url = rpc_url_result.unwrap();
@@ -74,7 +74,7 @@ impl TransferArgs {
         });
 
         if identity_keypair.is_err() {
-            println!("{}", format!("Error: Invalid identity keypair").red());
+            println!("{}", "Error: Invalid identity keypair".red());
             return;
         }
 
@@ -86,7 +86,7 @@ impl TransferArgs {
             tokio::try_join!(rpc.get_epoch_info(), rpc.get_balance(&identity_pubkey));
 
         if rpc_call_result.is_err() {
-            println!("{}", format!("Error: Failed to fetch data from RPC").red());
+            println!("{}", "Error: Failed to fetch data from RPC".red());
             return;
         }
 
@@ -100,7 +100,7 @@ impl TransferArgs {
             |input| validate_epoch(input, current_epoch_info.epoch),
         );
         if epoch_result.is_err() {
-            println!("{}", format!("Error: Invalid epoch").red());
+            println!("{}", "Error: Invalid epoch".red());
             return;
         }
         let epoch = epoch_result.unwrap();
@@ -116,7 +116,7 @@ impl TransferArgs {
             );
             println!(
                 "{}",
-                format!("Please run the calculate command first to generate the rewards file.")
+                "Please run the calculate command first to generate the rewards file."
                     .blue()
                     .bold()
             );
@@ -138,7 +138,7 @@ impl TransferArgs {
             |input| validate_pubkey(input),
         );
         if stake_pool_pubkey_result.is_err() {
-            println!("{}", format!("Error: Invalid pubkey").red());
+            println!("{}", "Error: Invalid pubkey".red());
             return;
         }
 
@@ -163,7 +163,7 @@ impl TransferArgs {
             validate_bps,
         );
         if total_rewards_bps_result.is_err() {
-            println!("{}", format!("Error: Invalid total rewards BPS").red());
+            println!("{}", "Error: Invalid total rewards BPS".red());
             return;
         }
         let total_rewards_bps = total_rewards_bps_result.unwrap();
@@ -176,7 +176,7 @@ impl TransferArgs {
             validate_bps,
         );
         if lst_rewards_bps_result.is_err() {
-            println!("{}", format!("Error: Invalid LST rewards BPS").red());
+            println!("{}", "Error: Invalid LST rewards BPS".red());
             return;
         }
         let lst_rewards_bps = lst_rewards_bps_result.unwrap();

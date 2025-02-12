@@ -30,14 +30,14 @@ impl SignArgs {
 
         let signed_message = identity_keypair.sign_message(ENDORSE_MESSAGE.as_bytes());
 
-        println!("{}", format!("Signed Message:").green().bold());
+        println!("{}", "Signed Message:".green().bold());
         println!("{}", signed_message);
 
         println!("{}", "=".repeat(80));
 
         println!(
             "{}",
-            format!("Reach out to us on Telegram @fp_lee with your signed message")
+            "Reach out to us on Telegram @fp_lee with your signed message"
                 .blue()
                 .bold()
         );

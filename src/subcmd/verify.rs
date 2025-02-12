@@ -18,7 +18,7 @@ impl VerifyArgs {
             |input| validate_pubkey(input),
         );
         if identity_pubkey.is_err() {
-            println!("{}", format!("Error: Invalid pubkey").red());
+            println!("{}", "Error: Invalid pubkey".red());
             return;
         }
 
@@ -26,7 +26,7 @@ impl VerifyArgs {
 
         let signed_message = input_string("Enter signed message", "5KZiXZsDZ1...", None, None);
         if signed_message.is_err() {
-            println!("{}", format!("Error: Invalid signed message").red());
+            println!("{}", "Error: Invalid signed message".red());
             return;
         }
         let signed_message = signed_message.unwrap();
@@ -48,9 +48,9 @@ impl VerifyArgs {
         let verified = signature.verify(&identity_pubkey.to_bytes(), ENDORSE_MESSAGE.as_bytes());
 
         if verified {
-            println!("{}", format!("✓ Verified!").green().bold());
+            println!("{}", "✓ Verified!".green().bold());
         } else {
-            println!("{}", format!("✗ Verification failed!").red().bold());
+            println!("{}", "✗ Verification failed!".red().bold());
         }
     }
 }

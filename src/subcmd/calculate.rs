@@ -44,7 +44,7 @@ impl CalculateArgs {
             |input| validate_rpc_url(input),
         );
         if rpc_url_result.is_err() {
-            println!("{}", format!("Error: Invalid RPC URL").red());
+            println!("{}", "Error: Invalid RPC URL".red());
             return;
         }
         let rpc_url = rpc_url_result.unwrap();
@@ -57,7 +57,7 @@ impl CalculateArgs {
         let rpc_call_result = tokio::try_join!(rpc.get_epoch_info(), rpc.get_epoch_schedule());
 
         if rpc_call_result.is_err() {
-            println!("{}", format!("Error: Failed to fetch data from RPC").red());
+            println!("{}", "Error: Failed to fetch data from RPC".red());
             return;
         }
 
@@ -71,7 +71,7 @@ impl CalculateArgs {
             |input| validate_epoch(input, current_epoch_info.epoch),
         );
         if epoch_result.is_err() {
-            println!("{}", format!("Error: Invalid epoch").red());
+            println!("{}", "Error: Invalid epoch".red());
             return;
         }
         let epoch = epoch_result.unwrap();
@@ -84,7 +84,7 @@ impl CalculateArgs {
         });
 
         if identity_keypair.is_err() {
-            println!("{}", format!("Error: Invalid identity keypair").red());
+            println!("{}", "Error: Invalid identity keypair".red());
             return;
         }
 
@@ -159,7 +159,7 @@ impl CalculateArgs {
         if leader_slots.len() > 200 && rpc.url() == SOLANA_PUBLIC_RPC {
             println!(
                 "{}",
-                format!("⚠️ We recommend using a custom RPC URL to avoid longer wait time and rate limits.",)
+                "⚠️ We recommend using a custom RPC URL to avoid longer wait time and rate limits."
                     .yellow()
                     .bold()
             );
