@@ -133,7 +133,7 @@ pub async fn get_leader_slots_for_identity(
     // Map relative leader slots to absolute slots
     let mut leader_slots = Vec::with_capacity(relative_leader_slots.len());
     for &relative_leader_slot in relative_leader_slots.iter() {
-        let absolute_slot = epoch_first_slot + relative_leader_slot as u64;
+        let absolute_slot = epoch_first_slot + (relative_leader_slot as u64);
         leader_slots.push(absolute_slot);
     }
 
@@ -155,7 +155,7 @@ pub async fn get_total_block_rewards_for_slots(
     for &slot in slots.iter() {
         let get_block_result = rpc
             .get_block_with_config(
-                slot as u64,
+                slot,
                 RpcBlockConfig {
                     rewards: Some(true),
                     commitment: Some(rpc.commitment()),
@@ -231,11 +231,7 @@ pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
 
     let final_ixs = vec![
         // Transfer rewards to Stake Pool reserve
-        transfer(
-            identity_pubkey,
-            &stake_pool.reserve_stake,
-            lst_rewards.try_into().unwrap(),
-        ),
+        transfer(identity_pubkey, &stake_pool.reserve_stake, lst_rewards),
         // Update stake pool balance
         update_stake_pool_balance_ix_with_program_id(
             stake_pool_program_id,
