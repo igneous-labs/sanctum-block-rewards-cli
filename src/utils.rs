@@ -8,7 +8,7 @@ use std::str::FromStr;
 
 pub fn get_rewards_file_path(identity_pubkey: &Pubkey, epoch: u64) -> String {
     let rewards_file_path = format!(
-        "{}/.config/sanctum/rewards_{}_{}.json",
+        "{}/.local/sanctum/rewards_{}_{}.json",
         dirs_next::home_dir().unwrap().to_str().unwrap(),
         identity_pubkey,
         epoch
