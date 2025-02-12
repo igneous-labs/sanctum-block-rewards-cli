@@ -24,7 +24,13 @@ impl VerifyArgs {
 
         let identity_pubkey = identity_pubkey.unwrap();
 
-        let signed_message = input_with_validation("Enter signed message", "5KZiXZsDZ1PnUURtYMD5hMm4FVE3UbxpUgb1J8uTq2hjEPrycWNABzFQGbomey6feqaWWDSFC2auLNViyi1wrhzw", None, None, |input| Ok(input.to_string()));
+        let signed_message = input_with_validation(
+            "Enter signed message",
+            "5KZiXZsDZ1...",
+            None,
+            None,
+            |input| Ok(input.to_string()),
+        );
         if signed_message.is_err() {
             println!("{}", format!("Error: Invalid signed message").red());
             return;

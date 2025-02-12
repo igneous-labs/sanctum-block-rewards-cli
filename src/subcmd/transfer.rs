@@ -112,16 +112,13 @@ impl TransferArgs {
         if Path::new(&rewards_file_path).exists() == false {
             println!(
                 "{}",
-                format!("Failed to find rewards at {}", rewards_file_path)
-                    .blue()
-                    .to_string()
+                format!("Failed to find rewards at {}", rewards_file_path).blue()
             );
             println!(
                 "{}",
                 format!("Please run the calculate command first to generate the rewards file.")
                     .blue()
                     .bold()
-                    .to_string()
             );
 
             println!("{}", "=".repeat(80));
@@ -222,7 +219,7 @@ impl TransferArgs {
             lst_symbol.magenta()
         );
 
-        let ans = Confirm::new(&confirm_message.blue().bold().to_string())
+        let ans = Confirm::new(&confirm_message.blue().bold())
             .with_default(true)
             .prompt();
 

@@ -104,9 +104,7 @@ impl CalculateArgs {
 
             println!(
                 "{}",
-                format!("Rewards file found at {}", rewards_file_path)
-                    .blue()
-                    .to_string()
+                format!("Rewards file found at {}", rewards_file_path).blue()
             );
             println!(
                 "{}",
@@ -118,7 +116,6 @@ impl CalculateArgs {
                 )
                 .green()
                 .bold()
-                .to_string()
             );
 
             println!("{}", "=".repeat(80));
@@ -173,8 +170,7 @@ impl CalculateArgs {
         let ans = Confirm::new(
             &"Do you wish to continue with fetching block rewards?"
                 .blue()
-                .bold()
-                .to_string(),
+                .bold(),
         )
         .with_default(true)
         .prompt();
@@ -225,14 +221,11 @@ impl CalculateArgs {
             )
             .green()
             .bold()
-            .to_string()
         );
 
         println!(
             "{}",
-            format!("Saved rewards to {}", rewards_file_path)
-                .blue()
-                .to_string()
+            format!("Saved rewards to {}", rewards_file_path).blue()
         );
 
         println!("{}", "=".repeat(80));
