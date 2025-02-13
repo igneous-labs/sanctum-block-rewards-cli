@@ -242,6 +242,7 @@ impl TransferArgs {
             &identity_pubkey,
             &stake_pool_pubkey,
             lst_rewards,
+            epoch,
         )
         .await;
 

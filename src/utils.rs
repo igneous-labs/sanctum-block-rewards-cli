@@ -132,10 +132,7 @@ pub fn validate_bps(input: &str) -> Result<u64, String> {
 }
 
 pub fn validate_pubkey(input: &str) -> Result<Pubkey, String> {
-    match Pubkey::from_str(input) {
-        Ok(_) => Ok(Pubkey::from_str(input).unwrap()),
-        Err(_) => Err("Error: Please enter a valid Solana public key".to_string()),
-    }
+    Pubkey::from_str(input).map_err(|_| "Error: Please enter a valid Solana public key".to_owned())
 }
 
 pub fn lamports_to_pretty_sol(lamports: u64) -> f64 {

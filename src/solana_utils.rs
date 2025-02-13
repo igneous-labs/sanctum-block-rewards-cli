@@ -109,26 +109,18 @@ pub async fn get_leader_slots_for_identity(
                 commitment: Some(rpc.commitment()),
             },
         )
-        .await;
+        .await
+        .map_err(|e| format!("Error: Failed to fetch leader slots for epoch {epoch}. {e}",))?;
 
-    if epoch_leader_schedule.is_err() {
-        return Err(format!(
-            "Error: Failed to fetch leader slots for epoch {}",
-            epoch
-        ));
-    }
-
-    let epoch_leader_schedule = epoch_leader_schedule.unwrap();
-
-    if epoch_leader_schedule.is_none() {
-        return Ok([].to_vec());
-    }
+    let epoch_leader_schedule = match epoch_leader_schedule {
+        Some(els) => els,
+        None => return Ok(Vec::new()),
+    };
 
     let relative_leader_slots = epoch_leader_schedule
-        .unwrap()
         .get(&identity_pubkey.to_string())
-        .unwrap_or(&vec![])
-        .to_vec();
+        .cloned()
+        .unwrap_or_default();
 
     // Map relative leader slots to absolute slots
     let mut leader_slots = Vec::with_capacity(relative_leader_slots.len());
@@ -146,7 +138,7 @@ pub async fn get_total_block_rewards_for_slots(
 ) -> Result<u64, String> {
     let mut total_rewards = 0u64;
 
-    let pb = ProgressBar::new(slots.len() as u64);
+    let pb = ProgressBar::new(u64::try_from(slots.len()).map_err(|e| e.to_string())?);
     pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} slots ({eta})")
             .unwrap()
             .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
@@ -191,6 +183,7 @@ pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
     identity_pubkey: &Pubkey,
     stake_pool_pubkey: &Pubkey,
     lst_rewards: u64,
+    epoch: u64,
 ) -> Result<Vec<Instruction>, String> {
     let stake_pool_account = rpc.get_account(&stake_pool_pubkey).await;
     if stake_pool_account.is_err() {
@@ -246,6 +239,11 @@ pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
             },
         )
         .unwrap(),
+        // Memo ix for easy indexing
+        spl_memo::build_memo(
+            format!("sbr-{epoch}-{lst_rewards}").as_ref(),
+            &[identity_pubkey],
+        ),
     ];
 
     Ok(final_ixs)
