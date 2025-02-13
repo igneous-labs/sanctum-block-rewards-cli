@@ -1,5 +1,3 @@
-use std::{fs::File, path::Path};
-
 use crate::{
     get_leader_slots_for_identity, get_rewards_file_path, get_total_block_rewards_for_slots,
     input_with_validation, lamports_to_pretty_sol, subcmd::Subcmd, validate_epoch,
@@ -13,6 +11,7 @@ use serde_json::{json, Value};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
 use spinners::{Spinner, Spinners};
+use std::{fs::File, path::Path};
 use tokio;
 
 #[derive(Args, Debug)]
