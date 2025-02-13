@@ -258,10 +258,6 @@ impl TransferArgs {
             _ => with_auto_cb_ixs(&rpc, &identity_pubkey, final_ixs, &[], fee_limit_cb).await,
         };
 
-        if send_mode == TxSendMode::DumpMsg {
-            println!("{}", "Transaction Message:".blue().bold());
-        }
-
         handle_tx_full(&rpc, send_mode, &final_ixs, &[], &mut [&identity_keypair]).await;
     }
 }
