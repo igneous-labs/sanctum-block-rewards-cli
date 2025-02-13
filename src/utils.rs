@@ -5,15 +5,19 @@ use serde::Deserialize;
 use solana_sdk::{native_token::LAMPORTS_PER_SOL, pubkey::Pubkey};
 use std::str::FromStr;
 
-pub fn get_rewards_file_path(identity_pubkey: &Pubkey, epoch: u64) -> String {
-    let rewards_file_path = format!(
-        "{}/.local/sanctum/rewards_{}_{}.json",
-        dirs_next::home_dir().unwrap().to_str().unwrap(),
-        identity_pubkey,
-        epoch
-    );
+pub fn get_rewards_file_path(identity_pubkey: &Pubkey, epoch: u64) -> Result<String, String> {
+    let home_dir = dirs_next::home_dir()
+        .ok_or_else(|| "Could not find home directory".to_string())
+        .and_then(|dir| {
+            dir.to_str()
+                .ok_or_else(|| "Invalid home directory path".to_string())
+                .map(String::from)
+        })?;
 
-    rewards_file_path
+    Ok(format!(
+        "{}/.local/sanctum/rewards_{}_{}.json",
+        home_dir, identity_pubkey, epoch
+    ))
 }
 
 pub fn checked_pct(value: u64, bps: u64) -> Option<u64> {
