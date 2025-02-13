@@ -1,9 +1,3 @@
-use colored::Colorize;
-use inquire::Confirm;
-use serde_json::Value;
-
-use std::{fs::File, path::Path};
-
 use crate::{
     checked_pct, get_lst_info, get_rewards_file_path, handle_tx_full, input_with_validation,
     print_transfer_summary, subcmd::Subcmd, transfer_to_reserve_and_update_stake_pool_balance_ixs,
@@ -11,9 +5,13 @@ use crate::{
     PrintTransferSummaryArgs, SOLANA_PUBLIC_RPC,
 };
 use clap::{command, Args};
+use colored::Colorize;
+use inquire::Confirm;
 use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner, TxSendMode};
+use serde_json::Value;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
+use std::{fs::File, path::Path};
 
 #[derive(Args, Debug)]
 #[command(long_about = "Transfer block rewards to the stake pool reserve")]

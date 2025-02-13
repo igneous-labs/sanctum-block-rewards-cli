@@ -1,10 +1,8 @@
+use super::Subcmd;
+use crate::ENDORSE_MESSAGE;
 use clap::{command, Args};
 use colored::Colorize;
 use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner};
-
-use crate::ENDORSE_MESSAGE;
-
-use super::Subcmd;
 
 #[derive(Args, Debug)]
 #[command(long_about = "Sign message to endorse your Sanctum LST")]
