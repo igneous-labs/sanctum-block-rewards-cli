@@ -220,7 +220,11 @@ pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
         .unwrap(),
         // Memo ix for easy indexing
         spl_memo::build_memo(
-            format!("sbr-{epoch}-{lst_rewards}").as_ref(),
+            format!(
+                "sbr-{epoch}-{}-{}-{lst_rewards}",
+                identity_pubkey, stake_pool_pubkey
+            )
+            .as_ref(),
             &[identity_pubkey],
         ),
     ];
