@@ -14,7 +14,7 @@ impl VerifyArgs {
             "ETVqa6damHxVTEgy88YRHuaKfwggE7soxAKcqos5maur",
             None,
             None,
-            |input| validate_pubkey(input),
+            validate_pubkey,
         );
         if identity_pubkey.is_err() {
             println!("{}", "Error: Invalid pubkey".red());

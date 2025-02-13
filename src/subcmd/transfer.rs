@@ -53,7 +53,7 @@ impl TransferArgs {
             "RPC URL",
             Some(SOLANA_PUBLIC_RPC.to_string()),
             args.rpc_url,
-            |input| validate_rpc_url(input),
+            validate_rpc_url,
         );
         if rpc_url_result.is_err() {
             println!("{}", "Error: Invalid RPC URL".red());
@@ -107,7 +107,7 @@ impl TransferArgs {
 
         let rewards_file_path = get_rewards_file_path(&identity_pubkey, epoch);
 
-        if Path::new(&rewards_file_path).exists() == false {
+        if !Path::new(&rewards_file_path).exists() {
             println!(
                 "{}",
                 format!("Failed to find rewards at {}", rewards_file_path).blue()
@@ -133,7 +133,7 @@ impl TransferArgs {
             "Stake pool pubkey",
             None,
             stake_pool_pubkey,
-            |input| validate_pubkey(input),
+            validate_pubkey,
         );
         if stake_pool_pubkey_result.is_err() {
             println!("{}", "Error: Invalid pubkey".red());

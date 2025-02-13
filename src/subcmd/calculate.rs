@@ -12,7 +12,6 @@ use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
 use spinners::{Spinner, Spinners};
 use std::{fs::File, path::Path};
-use tokio;
 
 #[derive(Args, Debug)]
 #[command(
@@ -40,7 +39,7 @@ impl CalculateArgs {
             "RPC URL",
             Some(SOLANA_PUBLIC_RPC.to_string()),
             args.rpc_url,
-            |input| validate_rpc_url(input),
+            validate_rpc_url,
         );
         if rpc_url_result.is_err() {
             println!("{}", "Error: Invalid RPC URL".red());
@@ -109,7 +108,7 @@ impl CalculateArgs {
                 "{}",
                 format!(
                     "✓ Total block rewards for {}... in epoch {} are {} SOL",
-                    identity_pubkey.to_string()[..6].to_string(),
+                    &identity_pubkey.to_string()[..6],
                     epoch,
                     total_block_rewards_sol
                 )
@@ -125,7 +124,7 @@ impl CalculateArgs {
             Spinners::Dots,
             format!(
                 "Fetching leader slots for {}...",
-                identity_pubkey.to_string()[..6].to_string()
+                &identity_pubkey.to_string()[..6]
             ),
         );
 
@@ -147,7 +146,7 @@ impl CalculateArgs {
             format!(
                 "✓ Found {} leader slots for {}... in epoch {}",
                 num_leader_slots,
-                identity_pubkey.to_string()[..6].to_string(),
+                &identity_pubkey.to_string()[..6],
                 epoch
             )
             .green()
@@ -214,7 +213,7 @@ impl CalculateArgs {
             "{}",
             format!(
                 "✓ Total block rewards for {} in epoch {} are {} SOL",
-                identity_pubkey.to_string()[..6].to_string(),
+                &identity_pubkey.to_string()[..6],
                 epoch,
                 total_block_rewards_sol
             )

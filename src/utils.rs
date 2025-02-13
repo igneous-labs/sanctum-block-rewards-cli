@@ -1,7 +1,6 @@
 use colored::Colorize;
 use comfy_table::{Attribute, Cell, Color, Table};
 use inquire::Text;
-use reqwest;
 use serde::Deserialize;
 use solana_sdk::{native_token::LAMPORTS_PER_SOL, pubkey::Pubkey};
 use std::str::FromStr;
