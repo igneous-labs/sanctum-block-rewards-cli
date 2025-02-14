@@ -48,66 +48,72 @@ impl TransferArgs {
             _ => unreachable!(),
         };
 
-        let rpc_url_result = input_with_validation(
+        let rpc_url = match input_with_validation(
             "Enter the RPC URL:",
             "RPC URL",
             Some(SOLANA_PUBLIC_RPC.to_string()),
             args.rpc_url,
-            |input| validate_rpc_url(input),
-        );
-        if rpc_url_result.is_err() {
-            println!("{}", "Error: Invalid RPC URL".red());
-            return;
-        }
-        let rpc_url = rpc_url_result.unwrap();
+            validate_rpc_url,
+        ) {
+            Ok(url) => url,
+            Err(_) => {
+                println!("{}", "Error: Invalid RPC URL".red());
+                return;
+            }
+        };
 
         let rpc = RpcClient::new_with_commitment(
             rpc_url,
             args.commitment.unwrap_or(CommitmentConfig::confirmed()),
         );
 
-        let identity_keypair = parse_named_signer(ParseNamedSigner {
+        let identity_keypair = match parse_named_signer(ParseNamedSigner {
             name: "identity",
             arg: &identity_keypair_path,
-        });
-
-        if identity_keypair.is_err() {
-            println!("{}", "Error: Invalid identity keypair".red());
-            return;
-        }
-
-        let identity_keypair = identity_keypair.unwrap();
+        }) {
+            Ok(keypair) => keypair,
+            Err(_) => {
+                println!("{}", "Error: Invalid identity keypair".red());
+                return;
+            }
+        };
 
         let identity_pubkey = identity_keypair.pubkey();
 
-        let rpc_call_result =
-            tokio::try_join!(rpc.get_epoch_info(), rpc.get_balance(&identity_pubkey));
+        let (current_epoch_info, identity_balance) =
+            match tokio::try_join!(rpc.get_epoch_info(), rpc.get_balance(&identity_pubkey)) {
+                Ok(result) => result,
+                Err(_) => {
+                    println!("{}", "Error: Failed to fetch data from RPC".red());
+                    return;
+                }
+            };
 
-        if rpc_call_result.is_err() {
-            println!("{}", "Error: Failed to fetch data from RPC".red());
-            return;
-        }
-
-        let (current_epoch_info, identity_balance) = rpc_call_result.unwrap();
-
-        let epoch_result = input_with_validation(
+        let epoch = match input_with_validation(
             "Enter the epoch to calculate rewards for:",
             &(current_epoch_info.epoch - 1).to_string(),
             Some((current_epoch_info.epoch - 1).to_string()),
             epoch.map(|e| e.to_string()),
             |input| validate_epoch(input, current_epoch_info.epoch),
-        );
-        if epoch_result.is_err() {
-            println!("{}", "Error: Invalid epoch".red());
-            return;
-        }
-        let epoch = epoch_result.unwrap();
+        ) {
+            Ok(e) => e,
+            Err(_) => {
+                println!("{}", "Error: Invalid epoch".red());
+                return;
+            }
+        };
 
         println!("{}", "=".repeat(80));
 
-        let rewards_file_path = get_rewards_file_path(&identity_pubkey, epoch);
+        let rewards_file_path = match get_rewards_file_path(&identity_pubkey, epoch) {
+            Ok(path) => path,
+            Err(err) => {
+                println!("{}", format!("Error: {}", err).red());
+                return;
+            }
+        };
 
-        if Path::new(&rewards_file_path).exists() == false {
+        if !Path::new(&rewards_file_path).exists() {
             println!(
                 "{}",
                 format!("Failed to find rewards at {}", rewards_file_path).blue()
@@ -123,61 +129,78 @@ impl TransferArgs {
             return;
         }
 
-        let rewards_file = File::open(rewards_file_path.clone()).unwrap();
-        let rewards: Value = serde_json::from_reader(rewards_file).unwrap();
+        let rewards: Value = match File::open(rewards_file_path.clone())
+            .map_err(|_| "Failed to open rewards file")
+            .and_then(|file| {
+                serde_json::from_reader(file).map_err(|_| "Failed to parse rewards file")
+            }) {
+            Ok(value) => value,
+            Err(err) => {
+                println!("{}", format!("Error: {}", err).red());
+                return;
+            }
+        };
 
-        let total_block_rewards = rewards["total_block_rewards"].as_u64().unwrap();
+        let total_block_rewards = match rewards["total_block_rewards"].as_u64() {
+            Some(rewards) => rewards,
+            None => {
+                println!("{}", "Error: Invalid rewards file format".red());
+                return;
+            }
+        };
 
-        let stake_pool_pubkey_result = input_with_validation(
+        let stake_pool_pubkey = match input_with_validation(
             "Enter the stake pool pubkey:",
             "Stake pool pubkey",
             None,
             stake_pool_pubkey,
-            |input| validate_pubkey(input),
-        );
-        if stake_pool_pubkey_result.is_err() {
-            println!("{}", "Error: Invalid pubkey".red());
-            return;
-        }
+            validate_pubkey,
+        ) {
+            Ok(pubkey) => pubkey,
+            Err(_) => {
+                println!("{}", "Error: Invalid pubkey".red());
+                return;
+            }
+        };
 
-        let stake_pool_pubkey = stake_pool_pubkey_result.unwrap();
+        let (lst_name, lst_symbol) = match get_lst_info(&stake_pool_pubkey.to_string()).await {
+            Ok(info) => info,
+            Err(_) => {
+                println!(
+                    "{}",
+                    "⚠ We could not find a LST for the specified address".yellow()
+                );
+                return;
+            }
+        };
 
-        let lst_info = get_lst_info(&stake_pool_pubkey.to_string()).await;
-        if lst_info.is_err() {
-            println!(
-                "{}",
-                "⚠ We could not find a LST for the specified address".yellow()
-            );
-            return;
-        }
-
-        let (lst_name, lst_symbol) = lst_info.unwrap();
-
-        let total_rewards_bps_result = input_with_validation(
+        let total_rewards_bps = match input_with_validation(
             "Enter the percentage of stake you want to consider for calculating the block rewards:",
             "75",
             None,
             total_rewards_pct.map(|bps| bps.to_string()),
             validate_bps,
-        );
-        if total_rewards_bps_result.is_err() {
-            println!("{}", "Error: Invalid total rewards BPS".red());
-            return;
-        }
-        let total_rewards_bps = total_rewards_bps_result.unwrap();
+        ) {
+            Ok(bps) => bps,
+            Err(_) => {
+                println!("{}", "Error: Invalid total rewards BPS".red());
+                return;
+            }
+        };
 
-        let lst_rewards_bps_result = input_with_validation(
+        let lst_rewards_bps = match input_with_validation(
             "Enter the percentage of block rewards to share:",
             "100",
             None,
             lst_rewards_pct.map(|bps| bps.to_string()),
             validate_bps,
-        );
-        if lst_rewards_bps_result.is_err() {
-            println!("{}", "Error: Invalid LST rewards BPS".red());
-            return;
-        }
-        let lst_rewards_bps = lst_rewards_bps_result.unwrap();
+        ) {
+            Ok(bps) => bps,
+            Err(_) => {
+                println!("{}", "Error: Invalid LST rewards BPS".red());
+                return;
+            }
+        };
 
         // Calculate stake pool's share
         let stake_pool_rewards = match checked_pct(total_block_rewards, total_rewards_bps) {
@@ -237,20 +260,21 @@ impl TransferArgs {
         let send_mode = args.send_mode;
         let fee_limit_cb = args.fee_limit_cb;
 
-        let final_ixs = transfer_to_reserve_and_update_stake_pool_balance_ixs(
+        let final_ixs = match transfer_to_reserve_and_update_stake_pool_balance_ixs(
             &rpc,
             &identity_pubkey,
             &stake_pool_pubkey,
             lst_rewards,
+            epoch,
         )
-        .await;
-
-        if final_ixs.is_err() {
-            println!("{}", final_ixs.err().unwrap());
-            return;
-        }
-
-        let final_ixs = final_ixs.unwrap();
+        .await
+        {
+            Ok(ixs) => ixs,
+            Err(err) => {
+                println!("{}", err);
+                return;
+            }
+        };
 
         let final_ixs = match send_mode {
             TxSendMode::DumpMsg => final_ixs,

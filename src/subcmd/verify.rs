@@ -9,40 +9,42 @@ pub struct VerifyArgs {}
 
 impl VerifyArgs {
     pub async fn run(_args: crate::Args) {
-        let identity_pubkey = input_with_validation(
+        let identity_pubkey = match input_with_validation(
             "Enter the Identity public key",
             "ETVqa6damHxVTEgy88YRHuaKfwggE7soxAKcqos5maur",
             None,
             None,
-            |input| validate_pubkey(input),
-        );
-        if identity_pubkey.is_err() {
-            println!("{}", "Error: Invalid pubkey".red());
-            return;
-        }
+            validate_pubkey,
+        ) {
+            Ok(pubkey) => pubkey,
+            Err(_) => {
+                println!("{}", "Error: Invalid pubkey".red());
+                return;
+            }
+        };
 
-        let identity_pubkey = identity_pubkey.unwrap();
-
-        let signed_message = input_string("Enter signed message", "5KZiXZsDZ1...", None, None);
-        if signed_message.is_err() {
-            println!("{}", "Error: Invalid signed message".red());
-            return;
-        }
-        let signed_message = signed_message.unwrap();
+        let signed_message = match input_string("Enter signed message", "5KZiXZsDZ1...", None, None)
+        {
+            Ok(msg) => msg,
+            Err(_) => {
+                println!("{}", "Error: Invalid signed message".red());
+                return;
+            }
+        };
 
         println!("{}", "=".repeat(80));
 
-        let signature = bs58::decode(signed_message.to_string())
+        let signature = match bs58::decode(signed_message.to_string())
             .into_vec()
             .ok()
-            .and_then(|bytes| Signature::try_from(&bytes[..]).ok());
-
-        if signature.is_none() {
-            println!("{}", "Error: Invalid signature".red());
-            return;
-        }
-
-        let signature = signature.unwrap();
+            .and_then(|bytes| Signature::try_from(&bytes[..]).ok())
+        {
+            None => {
+                println!("{}", "Error: Invalid signature".red());
+                return;
+            }
+            Some(sig) => sig,
+        };
 
         let verified = signature.verify(&identity_pubkey.to_bytes(), ENDORSE_MESSAGE.as_bytes());
 

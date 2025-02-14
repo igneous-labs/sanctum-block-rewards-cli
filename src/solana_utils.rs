@@ -70,18 +70,17 @@ pub async fn handle_tx_full(
     let payer_pk = signers[0].pubkey();
     signers.sort_by_key(|s| s.pubkey());
     let RecentBlockhash { hash, .. } = rpc.get_confirmed_blockhash().await.unwrap();
-    return rpc
-        .handle_tx(
-            &VersionedTransaction::try_new(
-                VersionedMessage::V0(Message::try_compile(&payer_pk, ixs, luts, hash).unwrap()),
-                &SortedSigners(signers),
-            )
-            .unwrap(),
-            send_mode,
-            HandleTxArgs::cli_default(),
+    rpc.handle_tx(
+        &VersionedTransaction::try_new(
+            VersionedMessage::V0(Message::try_compile(&payer_pk, ixs, luts, hash).unwrap()),
+            &SortedSigners(signers),
         )
-        .await
-        .unwrap();
+        .unwrap(),
+        send_mode,
+        HandleTxArgs::cli_default(),
+    )
+    .await
+    .unwrap()
 }
 
 pub fn get_first_slot_of_epoch(epoch: u64, epoch_schedule: &EpochSchedule) -> u64 {
@@ -109,26 +108,18 @@ pub async fn get_leader_slots_for_identity(
                 commitment: Some(rpc.commitment()),
             },
         )
-        .await;
+        .await
+        .map_err(|e| format!("Error: Failed to fetch leader slots for epoch {epoch}. {e}",))?;
 
-    if epoch_leader_schedule.is_err() {
-        return Err(format!(
-            "Error: Failed to fetch leader slots for epoch {}",
-            epoch
-        ));
-    }
-
-    let epoch_leader_schedule = epoch_leader_schedule.unwrap();
-
-    if epoch_leader_schedule.is_none() {
-        return Ok([].to_vec());
-    }
+    let epoch_leader_schedule = match epoch_leader_schedule {
+        Some(els) => els,
+        None => return Ok(Vec::new()),
+    };
 
     let relative_leader_slots = epoch_leader_schedule
-        .unwrap()
         .get(&identity_pubkey.to_string())
-        .unwrap_or(&vec![])
-        .to_vec();
+        .cloned()
+        .unwrap_or_default();
 
     // Map relative leader slots to absolute slots
     let mut leader_slots = Vec::with_capacity(relative_leader_slots.len());
@@ -137,7 +128,7 @@ pub async fn get_leader_slots_for_identity(
         leader_slots.push(absolute_slot);
     }
 
-    return Ok(leader_slots);
+    Ok(leader_slots)
 }
 
 pub async fn get_total_block_rewards_for_slots(
@@ -146,14 +137,14 @@ pub async fn get_total_block_rewards_for_slots(
 ) -> Result<u64, String> {
     let mut total_rewards = 0u64;
 
-    let pb = ProgressBar::new(slots.len() as u64);
+    let pb = ProgressBar::new(u64::try_from(slots.len()).map_err(|e| e.to_string())?);
     pb.set_style(ProgressStyle::with_template("{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {pos}/{len} slots ({eta})")
             .unwrap()
             .with_key("eta", |state: &ProgressState, w: &mut dyn Write| write!(w, "{:.1}s", state.eta().as_secs_f64()).unwrap())
             .progress_chars("#>-"));
 
     for &slot in slots.iter() {
-        let get_block_result = rpc
+        let block = rpc
             .get_block_with_config(
                 slot,
                 RpcBlockConfig {
@@ -164,16 +155,8 @@ pub async fn get_total_block_rewards_for_slots(
                     ..Default::default()
                 },
             )
-            .await;
-
-        if let Err(e) = get_block_result {
-            return Err(format!(
-                "Error: Failed to fetch block for slot {}: {}",
-                slot, e
-            ));
-        }
-
-        let block = get_block_result.unwrap();
+            .await
+            .map_err(|e| format!("Error: Failed to fetch block for slot {}: {}", slot, e))?;
 
         if let Some(rewards) = block.rewards {
             let slot_rewards: u64 = rewards.iter().map(|reward| reward.lamports as u64).sum();
@@ -191,29 +174,17 @@ pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
     identity_pubkey: &Pubkey,
     stake_pool_pubkey: &Pubkey,
     lst_rewards: u64,
+    epoch: u64,
 ) -> Result<Vec<Instruction>, String> {
-    let stake_pool_account = rpc.get_account(&stake_pool_pubkey).await;
-    if stake_pool_account.is_err() {
-        return Err(format!(
-            "Error: Failed to fetch stake pool account: {}",
-            stake_pool_account.err().unwrap()
-        ));
-    }
-
-    let stake_pool_account = stake_pool_account.unwrap();
+    let stake_pool_account = rpc
+        .get_account(stake_pool_pubkey)
+        .await
+        .map_err(|e| format!("Error: Failed to fetch stake pool account: {}", e))?;
 
     let stake_pool_program_id = stake_pool_account.owner;
 
-    let stake_pool = StakePool::deserialize(&mut stake_pool_account.data.as_slice());
-
-    if stake_pool.is_err() {
-        return Err(format!(
-            "Error: Failed to deserialize stake pool: {}",
-            stake_pool.err().unwrap()
-        ));
-    }
-
-    let stake_pool = stake_pool.unwrap();
+    let stake_pool = StakePool::deserialize(&mut stake_pool_account.data.as_slice())
+        .map_err(|e| format!("Error: Failed to deserialize stake pool: {}", e))?;
 
     let StakePool {
         validator_list,
@@ -222,7 +193,8 @@ pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
         manager_fee_account,
         token_program,
         ..
-    } = deserialize_stake_pool_checked(stake_pool_account.data().as_ref()).unwrap();
+    } = deserialize_stake_pool_checked(stake_pool_account.data())
+        .map_err(|e| format!("Error: Failed to deserialize stake pool: {}", e))?;
 
     let (withdraw_authority, _bump) = FindWithdrawAuthority {
         pool: *stake_pool_pubkey,
@@ -246,6 +218,15 @@ pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
             },
         )
         .unwrap(),
+        // Memo ix for easy indexing
+        spl_memo::build_memo(
+            format!(
+                "sbr-{epoch}-{}-{}-{lst_rewards}",
+                identity_pubkey, stake_pool_pubkey
+            )
+            .as_ref(),
+            &[identity_pubkey],
+        ),
     ];
 
     Ok(final_ixs)

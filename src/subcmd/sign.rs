@@ -20,11 +20,16 @@ impl SignArgs {
             _ => unreachable!(),
         };
 
-        let identity_keypair = parse_named_signer(ParseNamedSigner {
+        let identity_keypair = match parse_named_signer(ParseNamedSigner {
             name: "identity",
             arg: &identity_keypair_path,
-        })
-        .unwrap();
+        }) {
+            Ok(keypair) => keypair,
+            Err(_) => {
+                println!("{}", "Error: Invalid identity keypair".red());
+                return;
+            }
+        };
 
         let signed_message = identity_keypair.sign_message(ENDORSE_MESSAGE.as_bytes());
 
