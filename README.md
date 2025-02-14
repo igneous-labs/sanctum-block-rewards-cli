@@ -1,11 +1,28 @@
-# sanctum-block-rewards-cli
+# ☁️ Sanctum Block Rewards CLI 
 
 A command-line tool for Solana validators to manage and distribute block rewards between stake pools and LST holders.
 
 ## Installation
 
+In case you don't have Rust installed, please follow the instructions [here](https://www.rust-lang.org/tools/install) to install Rust. Once you have Rust installed, you can proceed to install the CLI.
+
+### Clone the repository
+
 ```bash
-cargo install sanctum-rewards
+git clone https://github.com/igneous-labs/sanctum-block-rewards-cli.git
+cd sanctum-block-rewards-cli
+```
+
+### Install the CLI
+
+```bash
+cargo install --path . --locked 
+```
+
+### Verify the installation
+
+```bash
+sanctum-rewards --help
 ```
 
 ## Commands
@@ -15,7 +32,7 @@ cargo install sanctum-rewards
 ```bash
 Calculate the total block rewards earned by your validator for a specific epoch.
 
-Usage: blockrewards calculate [OPTIONS] --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
+Usage: sanctum-rewards calculate [OPTIONS] --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
 
 Options:
       --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
@@ -39,7 +56,7 @@ This command:
 ```bash
 Transfer block rewards to the stake pool reserve
 
-Usage: blockrewards transfer [OPTIONS] --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
+Usage: sanctum-rewards transfer [OPTIONS] --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
 
 Options:
       --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
@@ -71,7 +88,7 @@ This command:
 ```bash
 Sign message to endorse your Sanctum LST
 
-Usage: blockrewards sign --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
+Usage: sanctum-rewards sign --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
 
 Options:
       --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
