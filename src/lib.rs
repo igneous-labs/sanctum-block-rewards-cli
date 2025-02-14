@@ -11,8 +11,7 @@ pub use subcmd::*;
 pub use utils::*;
 
 pub const SOLANA_PUBLIC_RPC: &str = "https://api.mainnet-beta.solana.com";
-// TODO(sk): Finalize message
-pub const ENDORSE_MESSAGE: &str = "I endorse the Sanctum LST created for my validator.";
+pub const ENDORSE_MESSAGE: &str = "SANCTUMLSTCLAIM";
 
 #[derive(Parser, Debug)]
 #[command(author, version, about = "Sanctum Block Rewards CLI")]

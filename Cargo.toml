@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "blockrewards"
+name = "sanctum-rewards"
 path = "src/main.rs"
 
+[lib]
+name = "sanctum_block_rewards_cli"
 
 [dependencies]
 clap = { version = "^4", features = ["derive"] }
