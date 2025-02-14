@@ -10,12 +10,15 @@ In case you don't have Rust installed, please follow the instructions [here](htt
 
 ```bash
 git clone https://github.com/igneous-labs/sanctum-block-rewards-cli.git
-cd sanctum-block-rewards-cli
 ```
 
 ### Install the CLI
 
 ```bash
+# Navigate to the cloned repository
+cd sanctum-block-rewards-cli
+
+# Run cargo install
 cargo install --path . --locked 
 ```
 
