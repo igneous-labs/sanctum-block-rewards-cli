@@ -5,6 +5,8 @@ use serde::Deserialize;
 use solana_sdk::{native_token::LAMPORTS_PER_SOL, pubkey::Pubkey};
 use std::str::FromStr;
 
+pub const MAX_EPOCH_BACKWARDS_LOOKUP: u64 = 5;
+
 pub fn get_rewards_file_path(identity_pubkey: &Pubkey, epoch: u64) -> Result<String, String> {
     let home_dir = dirs_next::home_dir()
         .ok_or_else(|| "Could not find home directory".to_string())
@@ -95,10 +97,11 @@ pub fn validate_epoch(input: &str, current_epoch: u64) -> Result<u64, String> {
                     "Error: Epoch must be one of the last completed epochs (less than {})",
                     current_epoch
                 ))
-            } else if e < current_epoch.saturating_sub(5) {
+            } else if e < current_epoch.saturating_sub(MAX_EPOCH_BACKWARDS_LOOKUP) {
                 Err(format!(
-                    "Error: Epoch must be one of the last 5 completed epochs (epoch {} to {})",
-                    current_epoch.saturating_sub(5),
+                    "Error: Epoch must be one of the last {} completed epochs (epoch {} to {})",
+                    MAX_EPOCH_BACKWARDS_LOOKUP,
+                    current_epoch.saturating_sub(MAX_EPOCH_BACKWARDS_LOOKUP),
                     current_epoch - 1
                 ))
             } else {
