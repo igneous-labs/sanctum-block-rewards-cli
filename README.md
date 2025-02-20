@@ -83,7 +83,8 @@ This command:
 - Fetches block rewards data for the specified epoch using our public [Dune query](https://dune.com/queries/4745888)
 - Saves the results to a local JSON file for later use
 
-> NOTE: The data on Dune is usually lagging by 2-3 hours, so please make sure you consider this when using this command.
+> [!NOTE]  
+> The data on Dune is usually lagging by 2-3 hours, so please make sure you consider this when using this command.
 
 
 ### `transfer`
