@@ -196,10 +196,7 @@ impl CalculateWithDuneArgs {
                 DUNE_QUERY_ID,
                 Some(vec![
                     Parameter::number("epoch", &epoch.to_string()),
-                    Parameter::text(
-                        "identity_pubkey",
-                        "JupRhwjrF5fAcs6dFhLH59r3TJFvbcyLP2NRM8UGH9H",
-                    ),
+                    Parameter::text("identity_pubkey", &identity_pubkey.to_string()),
                 ]),
             )
             .await
