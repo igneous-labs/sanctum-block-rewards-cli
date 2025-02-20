@@ -1,9 +1,12 @@
 use colored::Colorize;
 use comfy_table::{Attribute, Cell, Color, Table};
 use inquire::Text;
+use sanctum_solana_cli_utils::TokenAmt;
 use serde::Deserialize;
-use solana_sdk::{native_token::LAMPORTS_PER_SOL, pubkey::Pubkey};
+use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
+
+const MAX_EPOCH_BACKWARDS_LOOKUP: u64 = 5;
 
 pub fn get_rewards_file_path(identity_pubkey: &Pubkey, epoch: u64) -> Result<String, String> {
     let home_dir = dirs_next::home_dir()
@@ -95,10 +98,11 @@ pub fn validate_epoch(input: &str, current_epoch: u64) -> Result<u64, String> {
                     "Error: Epoch must be one of the last completed epochs (less than {})",
                     current_epoch
                 ))
-            } else if e < current_epoch.saturating_sub(5) {
+            } else if e < current_epoch.saturating_sub(MAX_EPOCH_BACKWARDS_LOOKUP) {
                 Err(format!(
-                    "Error: Epoch must be one of the last 5 completed epochs (epoch {} to {})",
-                    current_epoch.saturating_sub(5),
+                    "Error: Epoch must be one of the last {} completed epochs (epoch {} to {})",
+                    MAX_EPOCH_BACKWARDS_LOOKUP,
+                    current_epoch.saturating_sub(MAX_EPOCH_BACKWARDS_LOOKUP),
                     current_epoch - 1
                 ))
             } else {
@@ -138,10 +142,6 @@ pub fn validate_pubkey(input: &str) -> Result<Pubkey, String> {
     Pubkey::from_str(input).map_err(|_| "Error: Please enter a valid Solana public key".to_owned())
 }
 
-pub fn lamports_to_pretty_sol(lamports: u64) -> f64 {
-    (lamports as f64 / LAMPORTS_PER_SOL as f64 * 1000.0).round() / 1000.0
-}
-
 pub struct PrintTransferSummaryArgs {
     pub epoch: u64,
     pub identity_balance: u64,
@@ -162,11 +162,6 @@ pub fn print_transfer_summary(args: PrintTransferSummaryArgs) {
         lst_rewards_bps,
         lst_rewards,
     } = args;
-
-    let total_block_rewards_sol = lamports_to_pretty_sol(total_block_rewards);
-    let stake_pool_rewards_sol = lamports_to_pretty_sol(stake_pool_rewards);
-    let lst_rewards_sol = lamports_to_pretty_sol(lst_rewards);
-    let balance_sol = lamports_to_pretty_sol(identity_balance);
 
     let mut table = Table::new();
     table
@@ -189,9 +184,27 @@ pub fn print_transfer_summary(args: PrintTransferSummaryArgs) {
         ])
         .add_row(vec![
             Cell::new(format!("{}", epoch)),
-            Cell::new(format!("{} SOL", total_block_rewards_sol)),
-            Cell::new(format!("{} SOL", stake_pool_rewards_sol)),
-            Cell::new(format!("{} SOL", lst_rewards_sol)),
+            Cell::new(format!(
+                "{} SOL",
+                TokenAmt {
+                    amt: total_block_rewards,
+                    decimals: 9
+                }
+            )),
+            Cell::new(format!(
+                "{} SOL",
+                TokenAmt {
+                    amt: stake_pool_rewards,
+                    decimals: 9
+                }
+            )),
+            Cell::new(format!(
+                "{} SOL",
+                TokenAmt {
+                    amt: lst_rewards,
+                    decimals: 9
+                }
+            )),
         ]);
 
     println!("{table}");
@@ -201,18 +214,29 @@ pub fn print_transfer_summary(args: PrintTransferSummaryArgs) {
     println!(
         "{}{}",
         "Pre Transfer balance: ".blue().bold(),
-        format!("{} SOL", balance_sol).green().bold()
+        format!(
+            "{} SOL",
+            TokenAmt {
+                amt: identity_balance,
+                decimals: 9
+            }
+        )
+        .green()
+        .bold()
     );
 
     println!(
         "{}{}",
         "Post Transfer balance: ".blue().bold(),
         {
-            let post_balance = balance_sol - lst_rewards_sol;
+            let post_balance = TokenAmt {
+                amt: identity_balance - lst_rewards,
+                decimals: 9,
+            };
             let formatted = format!("{} SOL", post_balance);
-            if post_balance >= 10.0 {
+            if post_balance.integer_part() >= 10 {
                 formatted.green()
-            } else if post_balance >= 3.0 {
+            } else if post_balance.integer_part() >= 3 {
                 formatted.yellow()
             } else {
                 formatted.red()

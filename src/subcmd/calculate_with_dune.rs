@@ -1,65 +1,71 @@
 use crate::{
-    get_leader_slots_for_identity, get_rewards_file_path, get_total_block_rewards_for_slots,
-    input_with_validation, subcmd::Subcmd, validate_epoch, validate_rpc_url, SOLANA_PUBLIC_RPC,
+    get_rewards_file_path, input_string, input_with_validation, subcmd::Subcmd, validate_epoch,
+    SOLANA_PUBLIC_RPC,
 };
 use clap::{command, Args};
 use colored::Colorize;
+use duners::{
+    client::DuneClient,
+    parameters::Parameter,
+    response::{ExecutionResponse, ExecutionStatus, GetResultResponse, GetStatusResponse},
+};
 use inquire::Confirm;
 use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner, TokenAmt};
 use serde_json::{json, Value};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
 use spinners::{Spinner, Spinners};
-use std::{fs::File, path::Path};
+use std::{fs::File, path::Path, time::Duration};
+
+const DUNE_QUERY_ID: u32 = 4745888;
+const DEFAULT_TIMEOUT_SECS: u64 = 300; // 5 minutes
 
 #[derive(Args, Debug)]
 #[command(
     long_about = "Calculate the total block rewards earned by your validator for a specific epoch."
 )]
-pub struct CalculateArgs {
+pub struct CalculateWithDuneArgs {
     #[arg(long, help = "The identity keypair of your validator")]
     pub identity_keypair_path: String,
+
+    #[arg(long, help = "Dune API key")]
+    pub dune_api_key: Option<String>,
+
     #[arg(long, help = "The epoch to calculate rewards for")]
     pub epoch: Option<u64>,
+
+    #[arg(
+        long,
+        help = "Timeout in seconds for waiting for query results (default: 300)",
+        default_value_t = DEFAULT_TIMEOUT_SECS
+    )]
+    pub timeout: u64,
 }
 
-impl CalculateArgs {
+impl CalculateWithDuneArgs {
     pub async fn run(args: crate::Args) {
         let Self {
             identity_keypair_path,
+            dune_api_key,
             epoch,
+            timeout,
         } = match args.subcmd {
-            Subcmd::Calculate(args) => args,
+            Subcmd::CalculateWithDune(args) => args,
             _ => unreachable!(),
         };
 
-        let rpc_url = match input_with_validation(
-            "Enter the RPC URL:",
-            "RPC URL",
-            Some(SOLANA_PUBLIC_RPC.to_string()),
-            args.rpc_url,
-            validate_rpc_url,
-        ) {
-            Ok(url) => url,
-            Err(_) => {
-                println!("{}", "Error: Invalid RPC URL".red());
-                return;
-            }
-        };
-
         let rpc = RpcClient::new_with_commitment(
-            rpc_url,
+            SOLANA_PUBLIC_RPC.to_string(),
             args.commitment.unwrap_or(CommitmentConfig::confirmed()),
         );
 
-        let (current_epoch_info, epoch_schedule) =
-            match tokio::try_join!(rpc.get_epoch_info(), rpc.get_epoch_schedule()) {
-                Ok(result) => result,
-                Err(_) => {
-                    println!("{}", "Error: Failed to fetch data from RPC".red());
-                    return;
-                }
-            };
+        let current_epoch_info = match rpc.get_epoch_info().await {
+            Ok(info) => info,
+            Err(_) => {
+                println!("{}", "Error: Failed to get current epoch info".red());
+                return;
+            }
+        };
 
         let epoch = match input_with_validation(
             "Enter the epoch to calculate rewards for:",
@@ -74,6 +80,16 @@ impl CalculateArgs {
                 return;
             }
         };
+
+        let dune_api_key =
+            match input_string("Enter your Dune API key:", "API key", None, dune_api_key) {
+                Ok(key) => key,
+                Err(_) => {
+                    println!("{}", "Error: Invalid Dune API key".red());
+                    return;
+                }
+            };
+
         println!("{}", "=".repeat(80));
 
         let identity_keypair = match parse_named_signer(ParseNamedSigner {
@@ -143,48 +159,12 @@ impl CalculateArgs {
             return;
         }
 
-        let mut sp = Spinner::new(
-            Spinners::Dots,
-            format!(
-                "Fetching leader slots for {}...",
-                &identity_pubkey.to_string()[..6]
-            ),
+        println!(
+            "{}",
+            "⚠️ Please note that the data on Dune is usually lagging by 2-3 hours"
+                .bold()
+                .yellow()
         );
-
-        let leader_slots =
-            match get_leader_slots_for_identity(&rpc, epoch, &epoch_schedule, &identity_pubkey)
-                .await
-            {
-                Ok(slots) => slots,
-                Err(err) => {
-                    println!("{}", format!("Error: {}", err).red());
-                    return;
-                }
-            };
-
-        let num_leader_slots = leader_slots.len();
-        sp.stop_with_message(
-            format!(
-                "✓ Found {} leader slots for {}... in epoch {}",
-                num_leader_slots,
-                &identity_pubkey.to_string()[..6],
-                epoch
-            )
-            .green()
-            .bold()
-            .to_string(),
-        );
-
-        if leader_slots.len() > 200 && rpc.url() == SOLANA_PUBLIC_RPC {
-            println!(
-                "{}",
-                "⚠️ We recommend using a custom RPC URL to avoid longer wait time and rate limits."
-                    .yellow()
-                    .bold()
-            );
-        }
-
-        println!("{}", "=".repeat(80));
 
         let ans = Confirm::new(
             &"Do you wish to continue with fetching block rewards?"
@@ -207,14 +187,126 @@ impl CalculateArgs {
 
         println!("{}", "=".repeat(80));
 
-        let total_block_rewards = match get_total_block_rewards_for_slots(&rpc, &leader_slots).await
+        let mut sp = Spinner::new(
+            Spinners::Dots,
+            format!(
+                "Executing Dune query for {}...",
+                &identity_pubkey.to_string()[..6]
+            ),
+        );
+
+        let dune_client = DuneClient::new(&dune_api_key);
+
+        let ExecutionResponse { execution_id, .. } = match dune_client
+            .execute_query(
+                DUNE_QUERY_ID,
+                Some(vec![
+                    Parameter::number("epoch", &epoch.to_string()),
+                    Parameter::text("identity_pubkey", &identity_pubkey.to_string()),
+                ]),
+            )
+            .await
         {
-            Ok(rewards) => rewards,
-            Err(err) => {
-                println!("{}", err);
+            Ok(response) => response,
+            Err(_) => {
+                sp.stop_with_message("Error: Failed to execute query".red().to_string());
                 return;
             }
         };
+
+        // Update spinner message with execution ID
+        sp.stop();
+        let mut sp = Spinner::new(
+            Spinners::Dots,
+            format!("Waiting for result of execution ID: {}", execution_id),
+        );
+
+        // Poll for results
+        let mut total_block_rewards = None;
+        let poll_interval_secs = 5;
+        let max_attempts = timeout / poll_interval_secs;
+
+        for _ in 0..max_attempts {
+            // Poll until timeout
+
+            let GetStatusResponse { state, .. } = match dune_client.get_status(&execution_id).await
+            {
+                Ok(status) => status,
+                Err(_) => {
+                    sp.stop_with_message("Error: Failed to get execution status".red().to_string());
+                    return;
+                }
+            };
+
+            match state {
+                ExecutionStatus::Failed => {
+                    sp.stop_with_message("Error: Query execution failed".red().to_string());
+                    return;
+                }
+                ExecutionStatus::Cancelled => {
+                    sp.stop_with_message("Error: Query execution cancelled".red().to_string());
+                    return;
+                }
+                ExecutionStatus::Complete => {
+                    #[derive(Debug, serde::Deserialize)]
+                    struct ResultStruct {
+                        epoch: u64,
+                        block_rewards: u64,
+                    }
+
+                    let GetResultResponse::<ResultStruct> { result, .. } =
+                        match dune_client.get_results::<ResultStruct>(&execution_id).await {
+                            Ok(r) => r,
+                            Err(_) => {
+                                sp.stop_with_message(
+                                    "Error: Failed to get execution results".red().to_string(),
+                                );
+                                return;
+                            }
+                        };
+
+                    for row in result.rows {
+                        if row.epoch == epoch {
+                            total_block_rewards = Some(row.block_rewards);
+                            break;
+                        }
+                    }
+
+                    if total_block_rewards.is_some() {
+                        break;
+                    }
+
+                    sp.stop_with_message(
+                        format!("Error: No rewards data found for epoch {}", epoch)
+                            .red()
+                            .to_string(),
+                    );
+                    return;
+                }
+                _ => {
+                    tokio::time::sleep(Duration::from_secs(poll_interval_secs)).await;
+                    continue;
+                }
+            }
+        }
+
+        let total_block_rewards = match total_block_rewards {
+            Some(rewards) => rewards,
+            None => {
+                sp.stop_with_message("Error: Query timed out".red().to_string());
+                return;
+            }
+        };
+
+        sp.stop_with_message(
+            "✓ Execution completed!"
+                .to_string()
+                .green()
+                .bold()
+                .to_string(),
+        );
+
+        println!("{}", "=".repeat(80));
 
         // Create all parent directories if they don't exist
         if let Some(parent) = Path::new(&rewards_file_path).parent() {
@@ -230,6 +322,7 @@ impl CalculateArgs {
             };
         }
 
+        // Save results to file
         match File::create(&rewards_file_path)
             .map_err(|e| e.to_string())
             .and_then(|file| {
@@ -251,7 +344,7 @@ impl CalculateArgs {
         println!(
             "{}",
             format!(
-                "✓ Total block rewards for {} in epoch {} are {} SOL",
+                "✓ Total block rewards for {}... in epoch {} are {} SOL",
                 &identity_pubkey.to_string()[..6],
                 epoch,
                 TokenAmt {
