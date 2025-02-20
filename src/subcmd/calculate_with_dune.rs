@@ -1,11 +1,15 @@
 use crate::{
     get_rewards_file_path, input_string, input_with_validation, subcmd::Subcmd, validate_epoch,
-    MAX_EPOCH_BACKWARDS_LOOKUP, SOLANA_PUBLIC_RPC,
+    SOLANA_PUBLIC_RPC,
 };
 use clap::{command, Args};
 use colored::Colorize;
+use duners::{
+    client::DuneClient,
+    parameters::Parameter,
+    response::{ExecutionResponse, ExecutionStatus, GetResultResponse, GetStatusResponse},
+};
 use inquire::Confirm;
-use reqwest::Client;
 use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner, TokenAmt};
 use serde_json::{json, Value};
 use solana_client::nonblocking::rpc_client::RpcClient;
@@ -13,8 +17,8 @@ use solana_sdk::commitment_config::CommitmentConfig;
 use spinners::{Spinner, Spinners};
 use std::{fs::File, path::Path, time::Duration};
 
-const DUNE_API_BASE_URL: &str = "https://api.dune.com/api/v1";
-const DUNE_QUERY_ID: u64 = 4745888;
+const DUNE_QUERY_ID: u32 = 4745888;
+// const DUNE_QUERY_ID: u32 = 4750136;
 const DEFAULT_TIMEOUT_SECS: u64 = 300; // 5 minutes
 
 #[derive(Args, Debug)]
@@ -88,8 +92,6 @@ impl CalculateWithDuneArgs {
             };
 
         println!("{}", "=".repeat(80));
-
-        let num_days = (MAX_EPOCH_BACKWARDS_LOOKUP + 1) * 2;
 
         let identity_keypair = match parse_named_signer(ParseNamedSigner {
             name: "identity",
@@ -187,45 +189,22 @@ impl CalculateWithDuneArgs {
             ),
         );
 
-        // Create HTTP client
-        let client = Client::new();
+        let dune_client = DuneClient::new(&dune_api_key);
 
-        // Execute query
-        let execute_response = client
-            .post(format!(
-                "{}/query/{}/execute",
-                DUNE_API_BASE_URL, DUNE_QUERY_ID
-            ))
-            .header("X-Dune-API-Key", &dune_api_key)
-            .json(&json!({
-                "parameters": {
-                    "identity_pubkey": identity_pubkey.to_string(),
-                    "num_days": num_days
-                }
-            }))
-            .send()
-            .await;
-
-        let execution_id = match execute_response {
-            Ok(response) => {
-                let json = match response.json::<Value>().await {
-                    Ok(j) => j,
-                    Err(_) => {
-                        sp.stop_with_message(
-                            "Error: Failed to parse execute response".red().to_string(),
-                        );
-                        return;
-                    }
-                };
-
-                match json["execution_id"].as_str() {
-                    Some(id) => id.to_string(),
-                    None => {
-                        sp.stop_with_message("Error: Invalid execute response".red().to_string());
-                        return;
-                    }
-                }
-            }
+        let ExecutionResponse { execution_id, .. } = match dune_client
+            .execute_query(
+                DUNE_QUERY_ID,
+                Some(vec![
+                    Parameter::number("epoch", &epoch.to_string()),
+                    Parameter::text(
+                        "identity_pubkey",
+                        "JupRhwjrF5fAcs6dFhLH59r3TJFvbcyLP2NRM8UGH9H",
+                    ),
+                ]),
+            )
+            .await
+        {
+            Ok(response) => response,
             Err(_) => {
                 sp.stop_with_message("Error: Failed to execute query".red().to_string());
                 return;
@@ -246,106 +225,62 @@ impl CalculateWithDuneArgs {
 
         for _ in 0..max_attempts {
             // Poll until timeout
-            let status_response = client
-                .get(format!(
-                    "{}/execution/{}/status",
-                    DUNE_API_BASE_URL, execution_id
-                ))
-                .header("X-Dune-API-Key", &dune_api_key)
-                .send()
-                .await;
 
-            match status_response {
-                Ok(response) => {
-                    let json: Value = match response.json().await {
-                        Ok(j) => j,
-                        Err(_) => {
-                            tokio::time::sleep(Duration::from_secs(poll_interval_secs)).await;
-                            continue;
-                        }
-                    };
+            let GetStatusResponse { state, .. } = match dune_client.get_status(&execution_id).await
+            {
+                Ok(status) => status,
+                Err(_) => {
+                    sp.stop_with_message("Error: Failed to get execution status".red().to_string());
+                    return;
+                }
+            };
 
-                    match json["state"].as_str() {
-                        Some("QUERY_STATE_FAILED") => {
-                            sp.stop_with_message("Error: Query execution failed".red().to_string());
-                            return;
-                        }
-                        Some("QUERY_STATE_CANCELED") => {
-                            sp.stop_with_message(
-                                "Error: Query execution was canceled".red().to_string(),
-                            );
-                            return;
-                        }
-                        Some("QUERY_STATE_EXPIRED") => {
-                            sp.stop_with_message(
-                                "Error: Query execution expired".red().to_string(),
-                            );
-                            return;
-                        }
-                        Some("QUERY_STATE_COMPLETED") => {
-                            // Get results
-                            let result_response = client
-                                .get(format!(
-                                    "{}/execution/{}/results",
-                                    DUNE_API_BASE_URL, execution_id
-                                ))
-                                .header("X-Dune-API-Key", &dune_api_key)
-                                .send()
-                                .await;
+            match state {
+                ExecutionStatus::Failed => {
+                    sp.stop_with_message("Error: Query execution failed".red().to_string());
+                    return;
+                }
+                ExecutionStatus::Cancelled => {
+                    sp.stop_with_message("Error: Query execution cancelled".red().to_string());
+                    return;
+                }
+                ExecutionStatus::Complete => {
+                    #[derive(Debug, serde::Deserialize)]
+                    struct ResultStruct {
+                        epoch: u64,
+                        block_rewards: u64,
+                    }
 
-                            match result_response {
-                                Ok(response) => {
-                                    let json: Value = match response.json().await {
-                                        Ok(j) => j,
-                                        Err(_) => {
-                                            sp.stop_with_message(
-                                                "Error: Failed to parse results".red().to_string(),
-                                            );
-                                            return;
-                                        }
-                                    };
-
-                                    // Extract block rewards from result
-                                    if let Some(rows) = json["result"]["rows"].as_array() {
-                                        for row in rows {
-                                            if let (Some(row_epoch), Some(rewards)) = (
-                                                row["epoch"].as_u64(),
-                                                row["block_rewards"].as_u64(),
-                                            ) {
-                                                if row_epoch == epoch {
-                                                    total_block_rewards = Some(rewards);
-                                                    break;
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    if total_block_rewards.is_some() {
-                                        break;
-                                    }
-
-                                    sp.stop_with_message(
-                                        format!("Error: No rewards data found for epoch {}", epoch)
-                                            .red()
-                                            .to_string(),
-                                    );
-                                    return;
-                                }
-                                Err(_) => {
-                                    sp.stop_with_message(
-                                        "Error: Failed to fetch results".red().to_string(),
-                                    );
-                                    return;
-                                }
+                    let GetResultResponse::<ResultStruct> { result, .. } =
+                        match dune_client.get_results::<ResultStruct>(&execution_id).await {
+                            Ok(r) => r,
+                            Err(_) => {
+                                sp.stop_with_message(
+                                    "Error: Failed to get execution results".red().to_string(),
+                                );
+                                return;
                             }
-                        }
-                        _ => {
-                            tokio::time::sleep(Duration::from_secs(poll_interval_secs)).await;
-                            continue;
+                        };
+
+                    for row in result.rows {
+                        if row.epoch == epoch {
+                            total_block_rewards = Some(row.block_rewards);
+                            break;
                         }
                     }
+
+                    if total_block_rewards.is_some() {
+                        break;
+                    }
+
+                    sp.stop_with_message(
+                        format!("Error: No rewards data found for epoch {}", epoch)
+                            .red()
+                            .to_string(),
+                    );
+                    return;
                 }
-                Err(_) => {
+                _ => {
                     tokio::time::sleep(Duration::from_secs(poll_interval_secs)).await;
                     continue;
                 }

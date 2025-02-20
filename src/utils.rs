@@ -6,7 +6,7 @@ use serde::Deserialize;
 use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 
-pub const MAX_EPOCH_BACKWARDS_LOOKUP: u64 = 5;
+const MAX_EPOCH_BACKWARDS_LOOKUP: u64 = 5;
 
 pub fn get_rewards_file_path(identity_pubkey: &Pubkey, epoch: u64) -> Result<String, String> {
     let home_dir = dirs_next::home_dir()

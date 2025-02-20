@@ -37,6 +37,7 @@ solana-readonly-account = { git = "https://github.com/igneous-labs/sanctum-solan
 
 solana-client = ">=1.18"
 solana-sdk = ">=1.18"
+duners = "0.0.2"
 
 
 
