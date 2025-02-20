@@ -160,6 +160,13 @@ impl CalculateWithDuneArgs {
             return;
         }
 
+        println!(
+            "{}",
+            "⚠️ Please note that the data on Dune is usually lagging by 2-3 hours"
+                .bold()
+                .yellow()
+        );
+
         let ans = Confirm::new(
             &"Do you wish to continue with fetching block rewards?"
                 .blue()

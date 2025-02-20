@@ -53,6 +53,38 @@ This command:
 - Calculates total rewards earned
 - Saves the results to a local JSON file for later use
 
+### `calculate-with-dune`
+
+```bash
+Calculate the total block rewards earned by your validator for a specific epoch.
+
+Usage: sanctum-rewards calculate-with-dune [OPTIONS] --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
+
+Options:
+      --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
+          The identity keypair of your validator
+
+      --dune-api-key <DUNE_API_KEY>
+          Dune API key
+
+      --epoch <EPOCH>
+          The epoch to calculate rewards for
+
+      --timeout <TIMEOUT>
+          Timeout in seconds for waiting for query results (default: 300)
+          
+          [default: 300]
+
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+This command:
+- Fetches block rewards data for the specified epoch using our public [Dune query](https://dune.com/queries/4745888)
+- Saves the results to a local JSON file for later use
+
+> NOTE: The data on Dune is usually lagging by 2-3 hours, so please make sure you consider this when using this command.
+
 
 ### `transfer`
 
