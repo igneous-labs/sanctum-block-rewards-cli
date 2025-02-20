@@ -1,12 +1,12 @@
 use crate::{
-    get_rewards_file_path, input_string, input_with_validation, lamports_to_pretty_sol,
-    subcmd::Subcmd, validate_epoch, MAX_EPOCH_BACKWARDS_LOOKUP, SOLANA_PUBLIC_RPC,
+    get_rewards_file_path, input_string, input_with_validation, subcmd::Subcmd, validate_epoch,
+    MAX_EPOCH_BACKWARDS_LOOKUP, SOLANA_PUBLIC_RPC,
 };
 use clap::{command, Args};
 use colored::Colorize;
 use inquire::Confirm;
 use reqwest::Client;
-use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner};
+use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner, TokenAmt};
 use serde_json::{json, Value};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -135,8 +135,6 @@ impl CalculateWithDuneArgs {
                 }
             };
 
-            let total_block_rewards_sol = lamports_to_pretty_sol(total_block_rewards);
-
             println!(
                 "{}",
                 format!("Rewards file found at {}", rewards_file_path).blue()
@@ -147,7 +145,10 @@ impl CalculateWithDuneArgs {
                     "✓ Total block rewards for {}... in epoch {} are {} SOL",
                     &identity_pubkey.to_string()[..6],
                     epoch,
-                    total_block_rewards_sol
+                    TokenAmt {
+                        amt: total_block_rewards,
+                        decimals: 9
+                    }
                 )
                 .green()
                 .bold()
@@ -198,7 +199,7 @@ impl CalculateWithDuneArgs {
             .header("X-Dune-API-Key", &dune_api_key)
             .json(&json!({
                 "parameters": {
-                    "identity_pubkey": "JupRhwjrF5fAcs6dFhLH59r3TJFvbcyLP2NRM8UGH9H".to_string(),
+                    "identity_pubkey": identity_pubkey.to_string(),
                     "num_days": num_days
                 }
             }))
@@ -267,6 +268,18 @@ impl CalculateWithDuneArgs {
                     match json["state"].as_str() {
                         Some("QUERY_STATE_FAILED") => {
                             sp.stop_with_message("Error: Query execution failed".red().to_string());
+                            return;
+                        }
+                        Some("QUERY_STATE_CANCELED") => {
+                            sp.stop_with_message(
+                                "Error: Query execution was canceled".red().to_string(),
+                            );
+                            return;
+                        }
+                        Some("QUERY_STATE_EXPIRED") => {
+                            sp.stop_with_message(
+                                "Error: Query execution expired".red().to_string(),
+                            );
                             return;
                         }
                         Some("QUERY_STATE_COMPLETED") => {
@@ -390,15 +403,16 @@ impl CalculateWithDuneArgs {
             }
         };
 
-        let total_block_rewards_sol = lamports_to_pretty_sol(total_block_rewards);
-
         println!(
             "{}",
             format!(
                 "✓ Total block rewards for {}... in epoch {} are {} SOL",
                 &identity_pubkey.to_string()[..6],
                 epoch,
-                total_block_rewards_sol
+                TokenAmt {
+                    amt: total_block_rewards,
+                    decimals: 9
+                }
             )
             .green()
             .bold()

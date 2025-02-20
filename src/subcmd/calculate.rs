@@ -1,12 +1,11 @@
 use crate::{
     get_leader_slots_for_identity, get_rewards_file_path, get_total_block_rewards_for_slots,
-    input_with_validation, lamports_to_pretty_sol, subcmd::Subcmd, validate_epoch,
-    validate_rpc_url, SOLANA_PUBLIC_RPC,
+    input_with_validation, subcmd::Subcmd, validate_epoch, validate_rpc_url, SOLANA_PUBLIC_RPC,
 };
 use clap::{command, Args};
 use colored::Colorize;
 use inquire::Confirm;
-use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner};
+use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner, TokenAmt};
 use serde_json::{json, Value};
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -121,8 +120,6 @@ impl CalculateArgs {
                 }
             };
 
-            let total_block_rewards_sol = lamports_to_pretty_sol(total_block_rewards);
-
             println!(
                 "{}",
                 format!("Rewards file found at {}", rewards_file_path).blue()
@@ -133,7 +130,10 @@ impl CalculateArgs {
                     "✓ Total block rewards for {}... in epoch {} are {} SOL",
                     &identity_pubkey.to_string()[..6],
                     epoch,
-                    total_block_rewards_sol
+                    TokenAmt {
+                        amt: total_block_rewards,
+                        decimals: 9
+                    }
                 )
                 .green()
                 .bold()
@@ -215,7 +215,6 @@ impl CalculateArgs {
                 return;
             }
         };
-        let total_block_rewards_sol = lamports_to_pretty_sol(total_block_rewards);
 
         // Create all parent directories if they don't exist
         if let Some(parent) = Path::new(&rewards_file_path).parent() {
@@ -255,7 +254,10 @@ impl CalculateArgs {
                 "✓ Total block rewards for {} in epoch {} are {} SOL",
                 &identity_pubkey.to_string()[..6],
                 epoch,
-                total_block_rewards_sol
+                TokenAmt {
+                    amt: total_block_rewards,
+                    decimals: 9
+                }
             )
             .green()
             .bold()
