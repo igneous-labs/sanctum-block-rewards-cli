@@ -18,7 +18,6 @@ use spinners::{Spinner, Spinners};
 use std::{fs::File, path::Path, time::Duration};
 
 const DUNE_QUERY_ID: u32 = 4745888;
-// const DUNE_QUERY_ID: u32 = 4750136;
 const DEFAULT_TIMEOUT_SECS: u64 = 300; // 5 minutes
 
 #[derive(Args, Debug)]
