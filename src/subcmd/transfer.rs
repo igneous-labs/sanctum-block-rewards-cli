@@ -109,8 +109,8 @@ impl TransferArgs {
 
         let payer_pubkey = payer_keypair.pubkey();
 
-        let (current_epoch_info, identity_balance) =
-            match tokio::try_join!(rpc.get_epoch_info(), rpc.get_balance(&identity_pubkey)) {
+        let (current_epoch_info, payer_balance) =
+            match tokio::try_join!(rpc.get_epoch_info(), rpc.get_balance(&payer_pubkey)) {
                 Ok(result) => result,
                 Err(_) => {
                     println!("{}", "Error: Failed to fetch data from RPC".red());
@@ -253,7 +253,7 @@ impl TransferArgs {
 
         print_transfer_summary(PrintTransferSummaryArgs {
             epoch,
-            identity_balance,
+            payer_balance,
             total_block_rewards,
             total_rewards_bps,
             stake_pool_rewards,
