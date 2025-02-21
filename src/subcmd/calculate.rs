@@ -191,6 +191,12 @@ impl CalculateArgs {
                     .yellow()
                     .bold()
             );
+            println!(
+                "{}",
+                "⚠️ We also have a `calculate-with-dune` command that also calulcates block rewards but using Dune Analytics."
+                    .yellow()
+                    .bold()
+            );
         }
 
         println!("{}", "=".repeat(80));
