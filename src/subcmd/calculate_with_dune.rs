@@ -10,12 +10,12 @@ use duners::{
     response::{ExecutionResponse, ExecutionStatus, GetResultResponse, GetStatusResponse},
 };
 use inquire::Confirm;
-use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner, TokenAmt};
+use sanctum_solana_cli_utils::TokenAmt;
 use serde_json::{json, Value};
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::commitment_config::CommitmentConfig;
+use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
 use spinners::{Spinner, Spinners};
-use std::{fs::File, path::Path, time::Duration};
+use std::{fs::File, path::Path, str::FromStr, time::Duration};
 
 const DUNE_QUERY_ID: u32 = 4745888;
 const DEFAULT_TIMEOUT_SECS: u64 = 300; // 5 minutes
@@ -25,8 +25,8 @@ const DEFAULT_TIMEOUT_SECS: u64 = 300; // 5 minutes
     long_about = "Calculate the total block rewards earned by your validator for a specific epoch."
 )]
 pub struct CalculateWithDuneArgs {
-    #[arg(long, help = "The identity keypair of your validator")]
-    pub identity_keypair_path: String,
+    #[arg(long, help = "The identity pubkey of your validator")]
+    pub identity_pubkey: Option<String>,
 
     #[arg(long, help = "Dune API key")]
     pub dune_api_key: Option<String>,
@@ -45,13 +45,34 @@ pub struct CalculateWithDuneArgs {
 impl CalculateWithDuneArgs {
     pub async fn run(args: crate::Args) {
         let Self {
-            identity_keypair_path,
+            identity_pubkey,
             dune_api_key,
             epoch,
             timeout,
         } = match args.subcmd {
             Subcmd::CalculateWithDune(args) => args,
             _ => unreachable!(),
+        };
+
+        let identity_pubkey = match input_string(
+            "Enter your validator's identity key:",
+            "Identity key",
+            None,
+            identity_pubkey,
+        ) {
+            Ok(key) => key,
+            Err(_) => {
+                println!("{}", "Error: Invalid identity key".red());
+                return;
+            }
+        };
+
+        let identity_pubkey = match Pubkey::from_str(&identity_pubkey) {
+            Ok(pubkey) => pubkey,
+            Err(_) => {
+                println!("{}", "Error: Invalid identity pubkey".red());
+                return;
+            }
         };
 
         let rpc = RpcClient::new_with_commitment(
@@ -91,19 +112,6 @@ impl CalculateWithDuneArgs {
             };
 
         println!("{}", "=".repeat(80));
-
-        let identity_keypair = match parse_named_signer(ParseNamedSigner {
-            name: "identity",
-            arg: &identity_keypair_path,
-        }) {
-            Ok(keypair) => keypair,
-            Err(_) => {
-                println!("{}", "Error: Invalid identity keypair".red());
-                return;
-            }
-        };
-
-        let identity_pubkey = identity_keypair.pubkey();
 
         // Check if rewards file exists
         let rewards_file_path = match get_rewards_file_path(&identity_pubkey, epoch) {

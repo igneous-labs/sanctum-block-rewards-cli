@@ -171,6 +171,7 @@ pub async fn get_total_block_rewards_for_slots(
 
 pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
     rpc: &RpcClient,
+    payer_pubkey: &Pubkey,
     identity_pubkey: &Pubkey,
     stake_pool_pubkey: &Pubkey,
     lst_rewards: u64,
@@ -203,7 +204,7 @@ pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
 
     let final_ixs = vec![
         // Transfer rewards to Stake Pool reserve
-        transfer(identity_pubkey, &stake_pool.reserve_stake, lst_rewards),
+        transfer(payer_pubkey, &stake_pool.reserve_stake, lst_rewards),
         // Update stake pool balance
         update_stake_pool_balance_ix_with_program_id(
             stake_pool_program_id,

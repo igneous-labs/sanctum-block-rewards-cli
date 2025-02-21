@@ -35,11 +35,11 @@ sanctum-rewards --help
 ```bash
 Calculate the total block rewards earned by your validator for a specific epoch.
 
-Usage: sanctum-rewards calculate [OPTIONS] --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
+Usage: sanctum-rewards calculate [OPTIONS]
 
 Options:
-      --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
-          The identity keypair of your validator
+      --identity-pubkey <IDENTITY_PUBKEY>
+          The identity pubkey of your validator
 
       --epoch <EPOCH>
           The epoch to calculate rewards for
@@ -58,11 +58,11 @@ This command:
 ```bash
 Calculate the total block rewards earned by your validator for a specific epoch.
 
-Usage: sanctum-rewards calculate-with-dune [OPTIONS] --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
+Usage: sanctum-rewards calculate-with-dune [OPTIONS]
 
 Options:
-      --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
-          The identity keypair of your validator
+      --identity-pubkey <IDENTITY_PUBKEY>
+          The identity pubkey of your validator
 
       --dune-api-key <DUNE_API_KEY>
           Dune API key
@@ -92,11 +92,14 @@ This command:
 ```bash
 Transfer block rewards to the stake pool reserve
 
-Usage: sanctum-rewards transfer [OPTIONS] --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
+Usage: sanctum-rewards transfer [OPTIONS] --payer <PAYER>
 
 Options:
-      --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
-          The identity keypair for your validator
+      --payer <PAYER>
+          Path to the keypair from where rewards will be transferred
+
+      --identity-pubkey <IDENTITY_PUBKEY>
+          The identity pubkey of your validator
 
       --epoch <EPOCH>
           The epoch to calculate rewards for
@@ -118,23 +121,3 @@ This command:
 - Loads previously calculated rewards data
 - Transfers the specified percentage of rewards to the stake pool reserve
 - Updates stake pool balance by calling `UpdateStakePoolBalance` instruction
-
-### `sign`
-
-```bash
-Sign message to endorse your Sanctum LST
-
-Usage: sanctum-rewards sign --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
-
-Options:
-      --identity-keypair-path <IDENTITY_KEYPAIR_PATH>
-          The identity keypair for your validator
-
-  -h, --help
-          Print help (see a summary with '-h')
-```
-
-This command:
-- Prompts the user to sign the message
-- Prints the signed message
-- Reach out to us on Telegram @fp_lee with your signed message

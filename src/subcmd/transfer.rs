@@ -1,8 +1,9 @@
 use crate::{
-    checked_pct, get_lst_info, get_rewards_file_path, handle_tx_full, input_with_validation,
-    print_transfer_summary, subcmd::Subcmd, transfer_to_reserve_and_update_stake_pool_balance_ixs,
-    validate_bps, validate_epoch, validate_pubkey, validate_rpc_url, with_auto_cb_ixs,
-    PrintTransferSummaryArgs, SOLANA_PUBLIC_RPC,
+    checked_pct, get_lst_info, get_rewards_file_path, handle_tx_full, input_string,
+    input_with_validation, print_transfer_summary, subcmd::Subcmd,
+    transfer_to_reserve_and_update_stake_pool_balance_ixs, validate_bps, validate_epoch,
+    validate_pubkey, validate_rpc_url, with_auto_cb_ixs, PrintTransferSummaryArgs,
+    SOLANA_PUBLIC_RPC,
 };
 use clap::{command, Args};
 use colored::Colorize;
@@ -10,14 +11,20 @@ use inquire::Confirm;
 use sanctum_solana_cli_utils::{parse_named_signer, ParseNamedSigner, TxSendMode};
 use serde_json::Value;
 use solana_client::nonblocking::rpc_client::RpcClient;
-use solana_sdk::commitment_config::CommitmentConfig;
-use std::{fs::File, path::Path};
+use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
+use std::{fs::File, path::Path, str::FromStr};
 
 #[derive(Args, Debug)]
 #[command(long_about = "Transfer block rewards to the stake pool reserve")]
 pub struct TransferArgs {
-    #[arg(long, help = "The identity keypair for your validator")]
-    pub identity_keypair_path: String,
+    #[arg(
+        long,
+        help = "Path to the keypair from where rewards will be transferred"
+    )]
+    pub payer: String,
+
+    #[arg(long, help = "The identity pubkey of your validator")]
+    pub identity_pubkey: Option<String>,
 
     #[arg(long, help = "The epoch to calculate rewards for")]
     pub epoch: Option<u64>,
@@ -38,7 +45,8 @@ pub struct TransferArgs {
 impl TransferArgs {
     pub async fn run(args: crate::Args) {
         let Self {
-            identity_keypair_path,
+            payer,
+            identity_pubkey,
             epoch,
             stake_pool_pubkey,
             total_rewards_pct,
@@ -46,6 +54,27 @@ impl TransferArgs {
         } = match args.subcmd {
             Subcmd::Transfer(a) => a,
             _ => unreachable!(),
+        };
+
+        let identity_pubkey = match input_string(
+            "Enter your validator's identity key:",
+            "Identity key",
+            None,
+            identity_pubkey,
+        ) {
+            Ok(key) => key,
+            Err(_) => {
+                println!("{}", "Error: Invalid identity key".red());
+                return;
+            }
+        };
+
+        let identity_pubkey = match Pubkey::from_str(&identity_pubkey) {
+            Ok(pubkey) => pubkey,
+            Err(_) => {
+                println!("{}", "Error: Invalid identity pubkey".red());
+                return;
+            }
         };
 
         let rpc_url = match input_with_validation(
@@ -67,9 +96,9 @@ impl TransferArgs {
             args.commitment.unwrap_or(CommitmentConfig::confirmed()),
         );
 
-        let identity_keypair = match parse_named_signer(ParseNamedSigner {
-            name: "identity",
-            arg: &identity_keypair_path,
+        let payer_keypair = match parse_named_signer(ParseNamedSigner {
+            name: "payer",
+            arg: &payer,
         }) {
             Ok(keypair) => keypair,
             Err(_) => {
@@ -78,10 +107,10 @@ impl TransferArgs {
             }
         };
 
-        let identity_pubkey = identity_keypair.pubkey();
+        let payer_pubkey = payer_keypair.pubkey();
 
-        let (current_epoch_info, identity_balance) =
-            match tokio::try_join!(rpc.get_epoch_info(), rpc.get_balance(&identity_pubkey)) {
+        let (current_epoch_info, payer_balance) =
+            match tokio::try_join!(rpc.get_epoch_info(), rpc.get_balance(&payer_pubkey)) {
                 Ok(result) => result,
                 Err(_) => {
                     println!("{}", "Error: Failed to fetch data from RPC".red());
@@ -224,7 +253,7 @@ impl TransferArgs {
 
         print_transfer_summary(PrintTransferSummaryArgs {
             epoch,
-            identity_balance,
+            payer_balance,
             total_block_rewards,
             total_rewards_bps,
             stake_pool_rewards,
@@ -262,6 +291,7 @@ impl TransferArgs {
 
         let final_ixs = match transfer_to_reserve_and_update_stake_pool_balance_ixs(
             &rpc,
+            &payer_pubkey,
             &identity_pubkey,
             &stake_pool_pubkey,
             lst_rewards,
@@ -285,6 +315,6 @@ impl TransferArgs {
             println!("{}", "Transaction Message:".blue().bold());
         }
 
-        handle_tx_full(&rpc, send_mode, &final_ixs, &[], &mut [&identity_keypair]).await;
+        handle_tx_full(&rpc, send_mode, &final_ixs, &[], &mut [&payer_keypair]).await;
     }
 }

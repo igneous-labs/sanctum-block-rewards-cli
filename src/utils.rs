@@ -144,7 +144,7 @@ pub fn validate_pubkey(input: &str) -> Result<Pubkey, String> {
 
 pub struct PrintTransferSummaryArgs {
     pub epoch: u64,
-    pub identity_balance: u64,
+    pub payer_balance: u64,
     pub total_block_rewards: u64,
     pub total_rewards_bps: u64,
     pub stake_pool_rewards: u64,
@@ -155,7 +155,7 @@ pub struct PrintTransferSummaryArgs {
 pub fn print_transfer_summary(args: PrintTransferSummaryArgs) {
     let PrintTransferSummaryArgs {
         epoch,
-        identity_balance,
+        payer_balance,
         total_block_rewards,
         total_rewards_bps,
         stake_pool_rewards,
@@ -217,7 +217,7 @@ pub fn print_transfer_summary(args: PrintTransferSummaryArgs) {
         format!(
             "{} SOL",
             TokenAmt {
-                amt: identity_balance,
+                amt: payer_balance,
                 decimals: 9
             }
         )
@@ -230,7 +230,7 @@ pub fn print_transfer_summary(args: PrintTransferSummaryArgs) {
         "Post Transfer balance: ".blue().bold(),
         {
             let post_balance = TokenAmt {
-                amt: identity_balance - lst_rewards,
+                amt: payer_balance.saturating_sub(lst_rewards),
                 decimals: 9,
             };
             let formatted = format!("{} SOL", post_balance);
