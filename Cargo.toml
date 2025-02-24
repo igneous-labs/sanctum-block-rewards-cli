@@ -12,7 +12,7 @@ name = "sanctum_block_rewards_cli"
 
 [dependencies]
 clap = { version = "^4", features = ["derive"] }
-tokio = { version = "^1", features = ["rt-multi-thread"] }
+tokio = { version = "^1", features = ["rt-multi-thread", "test-util"] }
 borsh = "^1"
 indicatif = "0.17.11"
 futures = "0.3.31"

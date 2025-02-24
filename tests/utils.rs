@@ -1,4 +1,8 @@
 use sanctum_block_rewards_cli::checked_pct;
+use sanctum_block_rewards_cli::get_total_block_rewards_for_slots;
+use sanctum_block_rewards_cli::SOLANA_PUBLIC_RPC;
+use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_sdk::commitment_config::CommitmentConfig;
 
 #[test]
 fn test_checked_pct() {
@@ -17,4 +21,39 @@ fn test_checked_pct() {
     // Test overflow cases
     assert_eq!(checked_pct(u64::MAX, 10000), None); // Should overflow
     assert_eq!(checked_pct(u64::MAX, 5000), None); // Should overflow
+}
+
+#[tokio::test]
+async fn test_get_total_block_rewards_for_slots_skipped_slot() {
+    let rpc = RpcClient::new_with_commitment(
+        SOLANA_PUBLIC_RPC.to_string(),
+        CommitmentConfig::confirmed(),
+    );
+
+    let slots = vec![322368304];
+    let total_rewards = get_total_block_rewards_for_slots(&rpc, &slots)
+        .await
+        .unwrap();
+
+    // Since the slot was skipped, total rewards should be 0
+    assert_eq!(total_rewards, 0);
+}
+
+#[tokio::test]
+async fn test_get_total_block_rewards_for_slots_valid_block() {
+    let rpc = RpcClient::new_with_commitment(
+        SOLANA_PUBLIC_RPC.to_string(),
+        CommitmentConfig::confirmed(),
+    );
+
+    let slots = vec![322272000];
+    let total_rewards = get_total_block_rewards_for_slots(&rpc, &slots)
+        .await
+        .unwrap();
+
+    // This block exists and should have non-zero rewards
+    assert!(
+        total_rewards > 0,
+        "Expected non-zero rewards for valid block"
+    );
 }
