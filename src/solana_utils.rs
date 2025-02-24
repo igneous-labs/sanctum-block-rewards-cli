@@ -33,6 +33,8 @@ use std::fmt::Write;
 
 const CU_BUFFER_RATIO: f64 = 1.1;
 const CUS_REQUIRED_FOR_SET_CU_LIMIT_IXS: u32 = 300;
+
+// https://github.com/solana-labs/solana/blob/27eff8408b7223bb3c4ab70523f8a8dca3ca6645/rpc-client-api/src/custom_error.rs#L17C1-L17C60
 const JSON_RPC_ERROR_CODE_SKIPPED_SLOT: i64 = -32007;
 
 pub async fn with_auto_cb_ixs(
@@ -164,7 +166,6 @@ pub async fn get_total_block_rewards_for_slots(
             Err(e) => match e.kind {
                 ClientErrorKind::RpcError(rpc_error) => match rpc_error {
                     RpcError::RpcResponseError { code, .. } => {
-                        // https://github.com/solana-labs/solana/blob/27eff8408b7223bb3c4ab70523f8a8dca3ca6645/rpc-client-api/src/custom_error.rs#L17C1-L17C60
                         if code == JSON_RPC_ERROR_CODE_SKIPPED_SLOT {
                             None
                         } else {
