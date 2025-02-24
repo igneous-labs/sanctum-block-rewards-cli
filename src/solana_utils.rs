@@ -9,8 +9,10 @@ use sanctum_solana_client_utils::{
 };
 use sanctum_spl_stake_pool_lib::{deserialize_stake_pool_checked, FindWithdrawAuthority};
 use solana_client::{
+    client_error::ClientErrorKind,
     nonblocking::rpc_client::RpcClient,
     rpc_config::{RpcBlockConfig, RpcLeaderScheduleConfig},
+    rpc_request::RpcError,
 };
 use solana_sdk::{
     account::ReadableAccount,
@@ -31,6 +33,7 @@ use std::fmt::Write;
 
 const CU_BUFFER_RATIO: f64 = 1.1;
 const CUS_REQUIRED_FOR_SET_CU_LIMIT_IXS: u32 = 300;
+const JSON_RPC_ERROR_CODE_SKIPPED_SLOT: i64 = -32007;
 
 pub async fn with_auto_cb_ixs(
     rpc: &RpcClient,
@@ -144,7 +147,7 @@ pub async fn get_total_block_rewards_for_slots(
             .progress_chars("#>-"));
 
     for &slot in slots.iter() {
-        let block = rpc
+        let block = match rpc
             .get_block_with_config(
                 slot,
                 RpcBlockConfig {
@@ -156,11 +159,29 @@ pub async fn get_total_block_rewards_for_slots(
                 },
             )
             .await
-            .map_err(|e| format!("Error: Failed to fetch block for slot {}: {}", slot, e))?;
+        {
+            Ok(block) => Some(block),
+            Err(e) => match e.kind {
+                ClientErrorKind::RpcError(rpc_error) => match rpc_error {
+                    RpcError::RpcResponseError { code, .. } => {
+                        // https://github.com/solana-labs/solana/blob/27eff8408b7223bb3c4ab70523f8a8dca3ca6645/rpc-client-api/src/custom_error.rs#L17C1-L17C60
+                        if code == JSON_RPC_ERROR_CODE_SKIPPED_SLOT {
+                            None
+                        } else {
+                            return Err(format!("RPC error for slot {}: {}", slot, rpc_error));
+                        }
+                    }
+                    _ => return Err(format!("RPC error for slot {}: {}", slot, rpc_error)),
+                },
+                _ => return Err(format!("Failed to fetch block data for slot {}", slot)),
+            },
+        };
 
-        if let Some(rewards) = block.rewards {
-            let slot_rewards: u64 = rewards.iter().map(|reward| reward.lamports as u64).sum();
-            total_rewards += slot_rewards;
+        if let Some(block) = block {
+            if let Some(rewards) = block.rewards {
+                let slot_rewards: u64 = rewards.iter().map(|reward| reward.lamports as u64).sum();
+                total_rewards += slot_rewards;
+            }
         }
 
         pb.inc(1);
