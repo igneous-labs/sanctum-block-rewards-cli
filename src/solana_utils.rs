@@ -248,7 +248,7 @@ pub async fn transfer_to_reserve_and_update_stake_pool_balance_ixs(
                 identity_pubkey, stake_pool_pubkey
             )
             .as_ref(),
-            &[identity_pubkey],
+            &[payer_pubkey],
         ),
     ];
 
