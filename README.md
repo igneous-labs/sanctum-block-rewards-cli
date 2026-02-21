@@ -1,4 +1,4 @@
-# ☁️ Sanctum Block Rewards CLI 
+# ☁️ Sanctum Validator APY CLI
 
 A command-line tool for Solana validators to manage and distribute block rewards between stake pools and LST holders.
 
@@ -9,14 +9,14 @@ In case you don't have Rust installed, please follow the instructions [here](htt
 ### Clone the repository
 
 ```bash
-git clone https://github.com/igneous-labs/sanctum-block-rewards-cli.git
+git clone https://github.com/igneous-labs/sanctum-validator-apy-cli.git
 ```
 
 ### Install the CLI
 
 ```bash
 # Navigate to the cloned repository
-cd sanctum-block-rewards-cli
+cd sanctum-validator-apy-cli
 
 # Run cargo install
 cargo install --path . --locked 
@@ -25,7 +25,7 @@ cargo install --path . --locked
 ### Verify the installation
 
 ```bash
-sanctum-rewards --help
+sanctum-validator-apy --help
 ```
 
 ## Commands
@@ -35,7 +35,7 @@ sanctum-rewards --help
 ```bash
 Calculate the total block rewards earned by your validator for a specific epoch.
 
-Usage: sanctum-rewards calculate [OPTIONS]
+Usage: sanctum-validator-apy calculate [OPTIONS]
 
 Options:
       --identity-pubkey <IDENTITY_PUBKEY>
@@ -58,7 +58,7 @@ This command:
 ```bash
 Calculate the total block rewards earned by your validator for a specific epoch.
 
-Usage: sanctum-rewards calculate-with-dune [OPTIONS]
+Usage: sanctum-validator-apy calculate-with-dune [OPTIONS]
 
 Options:
       --identity-pubkey <IDENTITY_PUBKEY>
@@ -92,7 +92,7 @@ This command:
 ```bash
 Transfer block rewards to the stake pool reserve
 
-Usage: sanctum-rewards transfer [OPTIONS] --payer <PAYER>
+Usage: sanctum-validator-apy transfer [OPTIONS] --payer <PAYER>
 
 Options:
       --payer <PAYER>

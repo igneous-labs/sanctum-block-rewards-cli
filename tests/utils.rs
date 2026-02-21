@@ -1,6 +1,6 @@
-use sanctum_block_rewards_cli::checked_pct;
-use sanctum_block_rewards_cli::get_total_block_rewards_for_slots;
-use sanctum_block_rewards_cli::SOLANA_PUBLIC_RPC;
+use sanctum_validator_apy_cli::checked_pct;
+use sanctum_validator_apy_cli::get_total_block_rewards_for_slots;
+use sanctum_validator_apy_cli::SOLANA_PUBLIC_RPC;
 use solana_client::nonblocking::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
 

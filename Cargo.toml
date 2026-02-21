@@ -1,14 +1,14 @@
 [package]
-name = "sanctum-block-rewards-cli"
+name = "sanctum-validator-apy-cli"
 version = "0.1.3"
 edition = "2021"
 
 [[bin]]
-name = "sanctum-rewards"
+name = "sanctum-validator-apy"
 path = "src/main.rs"
 
 [lib]
-name = "sanctum_block_rewards_cli"
+name = "sanctum_validator_apy_cli"
 
 [dependencies]
 clap = { version = "^4", features = ["derive"] }
