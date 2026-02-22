@@ -27,6 +27,7 @@ reqwest = { version = "0.11", features = ["json"] }
 toml = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 spl-memo = { version = "^5", features = ["no-entrypoint"] }
+stakewiz-rs = "0.1"
 
 # sanctum solana utils
 sanctum-solana-cli-utils = { features = ["clap"], git = "https://github.com/igneous-labs/sanctum-solana-utils" }

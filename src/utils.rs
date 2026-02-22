@@ -6,9 +6,13 @@ use serde::Deserialize;
 use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 
-const MAX_EPOCH_BACKWARDS_LOOKUP: u64 = 5;
+const MAX_EPOCH_BACKWARDS_LOOKUP: u64 = 50;
 
-pub fn get_rewards_file_path(identity_pubkey: &Pubkey, epoch: u64) -> Result<String, String> {
+pub fn get_rewards_file_path(
+    identity_pubkey: &Pubkey,
+    start_epoch: u64,
+    end_epoch: u64,
+) -> Result<String, String> {
     let home_dir = dirs_next::home_dir()
         .ok_or_else(|| "Could not find home directory".to_string())
         .and_then(|dir| {
@@ -18,8 +22,8 @@ pub fn get_rewards_file_path(identity_pubkey: &Pubkey, epoch: u64) -> Result<Str
         })?;
 
     Ok(format!(
-        "{}/.local/sanctum/rewards_{}_{}.json",
-        home_dir, identity_pubkey, epoch
+        "{}/.local/sanctum/rewards_{}_{}_{}.json",
+        home_dir, identity_pubkey, start_epoch, end_epoch
     ))
 }
 

@@ -5,6 +5,7 @@ use solana_sdk::commitment_config::CommitmentConfig;
 mod solana_utils;
 mod subcmd;
 mod utils;
+pub mod inflation;
 
 pub use solana_utils::*;
 pub use subcmd::*;

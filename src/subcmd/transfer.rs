@@ -134,7 +134,7 @@ impl TransferArgs {
 
         println!("{}", "=".repeat(80));
 
-        let rewards_file_path = match get_rewards_file_path(&identity_pubkey, epoch) {
+        let rewards_file_path = match get_rewards_file_path(&identity_pubkey, epoch, epoch) {
             Ok(path) => path,
             Err(err) => {
                 println!("{}", format!("Error: {}", err).red());

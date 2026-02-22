@@ -1,6 +1,6 @@
 # ☁️ Sanctum Validator APY CLI
 
-A command-line tool for Solana validators to manage and distribute block rewards between stake pools and LST holders.
+A command-line tool for Solana validators to calculate real APY (inflation + block rewards) and manage block reward distribution between stake pools and LST holders.
 
 ## Installation
 
@@ -83,9 +83,53 @@ This command:
 - Fetches block rewards data for the specified epoch using our public [Dune query](https://dune.com/queries/4745888)
 - Saves the results to a local JSON file for later use
 
-> [!NOTE]  
+> [!NOTE]
 > The data on Dune is usually lagging by 2-3 hours, so please make sure you consider this when using this command.
 
+### `calculate-apy`
+
+```bash
+Calculate the real APY (inflation + block rewards) for your validator over a range of epochs.
+
+Usage: sanctum-validator-apy calculate-apy [OPTIONS]
+
+Options:
+      --identity-pubkey <IDENTITY_PUBKEY>
+          The identity pubkey of your validator
+
+      --vote-account <VOTE_ACCOUNT>
+          The vote account pubkey of your validator
+
+      --dune-api-key <DUNE_API_KEY>
+          Dune API key
+
+      --helius-api-key <HELIUS_API_KEY>
+          Helius API key (for fetching inflation rewards)
+
+      --start-epoch <START_EPOCH>
+          The start epoch to calculate apy for
+
+      --end-epoch <END_EPOCH>
+          The end epoch to calculate apy for
+
+      --timeout <TIMEOUT>
+          Timeout in seconds for waiting for query results (default: 300)
+
+          [default: 300]
+
+  -h, --help
+          Print help (see a summary with '-h')
+```
+
+This command:
+- Fetches per-epoch block rewards from [Dune Analytics](https://dune.com/queries/6723900) (or loads from cache)
+- Fetches all stake account inflation rewards per epoch via Helius RPC (`getInflationReward`)
+- Retrieves per-epoch active stake from the [Stakewiz API](https://stakewiz.com)
+- Computes: `epoch_yield = (total_inflation + block_reward) / total_active_stake`
+- Annualizes with compounding: `APY = (1 + avg_epoch_yield) ^ 182.5 - 1`
+
+> [!NOTE]
+> Requires both a [Dune API key](https://dune.com/settings/api) and a [Helius API key](https://www.helius.dev/).
 
 ### `transfer`
 
